@@ -473,6 +473,7 @@ export default function App() {
         settings={settings}
         themeConfig={activeTheme}
         onSave={handleSaveSettings}
+        onSaveSettings={handleSaveSettings}
         haService={haServiceRef.current}
         onResetSampleData={handleResetSampleData}
       />

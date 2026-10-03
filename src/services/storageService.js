@@ -181,7 +181,15 @@ export function getStoredSettings() {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
       return DEFAULT_SETTINGS;
     }
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+    const parsed = JSON.parse(data);
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      haEntities: {
+        ...DEFAULT_SETTINGS.haEntities,
+        ...(parsed?.haEntities || {})
+      }
+    };
   } catch (err) {
     return DEFAULT_SETTINGS;
   }

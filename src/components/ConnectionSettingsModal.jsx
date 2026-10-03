@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Radio,
@@ -21,12 +21,14 @@ import {
   Flame,
   Milestone
 } from 'lucide-react';
+import { DEFAULT_SETTINGS } from '../services/storageService';
 
 export default function ConnectionSettingsModal({
   isOpen,
   onClose,
   settings,
   themeConfig,
+  onSave,
   onSaveSettings,
   haService,
   onResetSampleData
@@ -35,13 +37,38 @@ export default function ConnectionSettingsModal({
 
   const isRose = themeConfig?.id === 'rose';
 
-  const [formData, setFormData] = useState({ ...settings });
+  const [formData, setFormData] = useState(() => ({
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    haEntities: {
+      ...(DEFAULT_SETTINGS.haEntities || {}),
+      ...(settings?.haEntities || {})
+    }
+  }));
   const [testingStatus, setTestingStatus] = useState(null);
   const [discoveringStatus, setDiscoveringStatus] = useState(null);
   const [detectedSensors, setDetectedSensors] = useState([]);
   const [sensorFilter, setSensorFilter] = useState('merach');
   const [showCorsHelp, setShowCorsHelp] = useState(false);
   const [showCfTokens, setShowCfTokens] = useState(Boolean(settings?.cfClientId));
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Sync state whenever modal is opened or settings change
+  useEffect(() => {
+    if (isOpen && settings) {
+      setFormData({
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        haEntities: {
+          ...(DEFAULT_SETTINGS.haEntities || {}),
+          ...(settings.haEntities || {})
+        }
+      });
+      setTestingStatus(null);
+      setDiscoveringStatus(null);
+      setSaveSuccess(false);
+    }
+  }, [isOpen, settings]);
 
   const handleTestConnection = async () => {
     setTestingStatus({ loading: true, message: 'A testar conexão ao Home Assistant...' });
@@ -95,13 +122,14 @@ export default function ConnectionSettingsModal({
 
       setFormData((prev) => ({
         ...prev,
+        mode: 'homeassistant',
         haEntities: updatedEntities
       }));
 
       setDiscoveringStatus({
         loading: false,
         success: true,
-        message: `Detetados ${res.candidates.length} sensores da bicicleta Merach! Sensores da casa ignorados.`
+        message: `Detetados ${res.candidates.length} sensores Merach! Modo Home Assistant ativado.`
       });
     } catch (err) {
       setDiscoveringStatus({
@@ -130,6 +158,7 @@ export default function ConnectionSettingsModal({
   const assignSensor = (key, entityId) => {
     setFormData((prev) => ({
       ...prev,
+      mode: 'homeassistant',
       haEntities: {
         ...prev.haEntities,
         [key]: entityId
@@ -138,8 +167,15 @@ export default function ConnectionSettingsModal({
   };
 
   const handleSave = () => {
-    onSaveSettings(formData);
-    onClose();
+    const saveHandler = onSaveSettings || onSave;
+    if (typeof saveHandler === 'function') {
+      saveHandler(formData);
+    }
+    setSaveSuccess(true);
+    setTimeout(() => {
+      setSaveSuccess(false);
+      onClose();
+    }, 350);
   };
 
   return (
@@ -792,16 +828,30 @@ export default function ConnectionSettingsModal({
           </button>
           <button
             onClick={handleSave}
+            disabled={saveSuccess}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r ${
-              themeConfig?.primaryButtonGrad || 'from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400'
+              saveSuccess
+                ? 'from-emerald-500 to-teal-500 text-white'
+                : themeConfig?.primaryButtonGrad || 'from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400'
             } ${
-              isRose ? 'text-white' : 'text-slate-950'
+              isRose && !saveSuccess ? 'text-white' : ''
+            } ${
+              !isRose && !saveSuccess ? 'text-slate-950' : ''
             } font-bold shadow-lg ${
               themeConfig?.primaryButtonShadow || 'shadow-sky-500/20'
             } active:scale-95 transition-all cursor-pointer`}
           >
-            <Save className="w-4 h-4" />
-            Guardar Configurações
+            {saveSuccess ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-white animate-bounce" />
+                <span>Configurações Guardadas!</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Guardar Configurações</span>
+              </>
+            )}
           </button>
         </div>
       </div>
