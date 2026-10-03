@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SportNeedleGauge from './SportNeedleGauge';
 import LiveChart from './LiveChart';
 import WorkoutControls from './WorkoutControls';
+import RouteMap from './RouteMap';
+import { Gauge, Map } from 'lucide-react';
 
 export default function LiveDashboard({
   telemetry,
@@ -19,6 +21,8 @@ export default function LiveDashboard({
   onStop,
   onReset
 }) {
+  const [dashboardMode, setDashboardMode] = useState('gauges'); // 'gauges' | 'route'
+
   // Use themeConfig or fallback to cyan
   const speedAccent = themeConfig?.speedAccent || '#38bdf8';
   const speedZones = themeConfig?.speedZones || [
@@ -45,7 +49,7 @@ export default function LiveDashboard({
   const isRose = themeConfig?.id === 'rose';
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-16 md:pb-8 max-w-6xl mx-auto flex flex-col items-center">
+    <div className="space-y-6 animate-fadeIn pb-16 md:pb-8 max-w-6xl mx-auto flex flex-col items-center">
       {/* Centered Workout Timer & Controls */}
       <div className="w-full flex justify-center">
         <div className="w-full max-w-3xl">
@@ -64,7 +68,54 @@ export default function LiveDashboard({
         </div>
       </div>
 
-      {/* CLUSTER UNIFICADO PREMIUM: GAUGES COM DISTÂNCIA E CALORIAS INTEGRADAS NO MESMO PAINEL */}
+      {/* Cockpit Mode Switcher: Manómetros vs Percurso GPS */}
+      <div className={`flex items-center gap-1.5 p-1.5 rounded-2xl border backdrop-blur-xl transition-all ${
+        isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'bg-slate-900/80 border-slate-800'
+      }`}>
+        <button
+          type="button"
+          onClick={() => setDashboardMode('gauges')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            dashboardMode === 'gauges'
+              ? isRose
+                ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
+                : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 shadow-md font-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Gauge className="w-3.5 h-3.5" />
+          <span>Manómetros & Telemetria</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setDashboardMode('route')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            dashboardMode === 'route'
+              ? isRose
+                ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
+                : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 shadow-md font-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Map className="w-3.5 h-3.5" />
+          <span>Percurso Real & GPS (OpenStreetMap)</span>
+        </button>
+      </div>
+
+      {dashboardMode === 'route' ? (
+        <div className="w-full">
+          <RouteMap
+            currentDistanceKm={sessionStats.distanceKm}
+            speedKmH={telemetry.speed}
+            cadenceRpm={telemetry.cadence}
+            themeConfig={themeConfig}
+            workoutStatus={workoutStatus}
+          />
+        </div>
+      ) : (
+        <>
+          {/* CLUSTER UNIFICADO PREMIUM: GAUGES COM DISTÂNCIA E CALORIAS INTEGRADAS NO MESMO PAINEL */}
       <div 
         className="w-full rounded-[36px] p-6 lg:p-10 relative overflow-hidden flex flex-col items-center transition-all duration-700"
         style={{
@@ -255,6 +306,8 @@ export default function LiveDashboard({
           cadenceColor={cadenceAccent}
         />
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 }
