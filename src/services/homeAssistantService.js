@@ -161,26 +161,34 @@ export class HomeAssistantService {
 
       const states = await response.json();
       
-      // Filter candidates for Merach / ESP32 cycling entities across all types
-      const candidates = states.filter((s) => {
+      // 1. Filter strictly for Merach / Bike specific entities (avoiding general home sensors like switches, fans, curtains)
+      const merachCandidates = states.filter((s) => {
         const id = s.entity_id.toLowerCase();
         const fn = (s.attributes?.friendly_name || '').toLowerCase();
-        const unit = (s.attributes?.unit_of_measurement || '').toLowerCase();
-        const dc = (s.attributes?.device_class || '').toLowerCase();
         return (
-          id.includes('cadence') || id.includes('speed') || id.includes('merach') || 
-          id.includes('bike') || id.includes('cycling') || id.includes('rpm') ||
-          id.includes('power') || id.includes('watt') || id.includes('resistance') ||
-          id.includes('resistencia') || id.includes('heart') || id.includes('pulse') ||
-          id.includes('cardiac') || id.includes('esp32') || id.includes('ble') ||
-          id.includes('distance') || id.includes('distancia') || id.includes('calorie') ||
-          id.includes('caloria') || id.includes('kcal') ||
-          unit === 'rpm' || unit === 'km/h' || unit === 'w' || unit === 'bpm' ||
-          dc === 'power' || dc === 'speed' || dc === 'distance' ||
-          fn.includes('merach') || fn.includes('cadênc') || fn.includes('veloc') ||
-          fn.includes('potênc') || fn.includes('resistênc') || fn.includes('cardíac')
+          id.includes('merach') || 
+          fn.includes('merach') || 
+          (id.includes('bike') && !id.includes('curtain') && !id.includes('switch') && !id.includes('plug'))
         );
       });
+
+      // If Merach-specific entities exist (like in the user's setup), use ONLY those!
+      // Otherwise, fallback to a strict cycling sensor filter
+      let candidates = [];
+      if (merachCandidates.length > 0) {
+        candidates = merachCandidates;
+      } else {
+        candidates = states.filter((s) => {
+          const id = s.entity_id.toLowerCase();
+          const fn = (s.attributes?.friendly_name || '').toLowerCase();
+          const unit = (s.attributes?.unit_of_measurement || '').toLowerCase();
+          return (
+            (id.includes('cadence') || unit === 'rpm' || fn.includes('cadênc')) ||
+            (id.includes('speed') && (id.includes('bike') || id.includes('cycling') || fn.includes('bicicleta'))) ||
+            (id.includes('resistance') && (id.includes('bike') || fn.includes('resistênc')))
+          );
+        });
+      }
 
       // Best auto matches for each category
       const bestCadence = candidates.find((c) => {
@@ -192,14 +200,13 @@ export class HomeAssistantService {
       const bestSpeed = candidates.find((c) => {
         const id = c.entity_id.toLowerCase();
         const unit = (c.attributes?.unit_of_measurement || '').toLowerCase();
-        return id.includes('speed') || (unit.includes('km/h') && (id.includes('bike') || id.includes('merach')));
+        return id.includes('speed') || unit.includes('km/h');
       });
 
       const bestPower = candidates.find((c) => {
         const id = c.entity_id.toLowerCase();
         const unit = (c.attributes?.unit_of_measurement || '').toLowerCase();
-        const dc = (c.attributes?.device_class || '').toLowerCase();
-        return (id.includes('power') || id.includes('watt') || unit === 'w' || dc === 'power');
+        return (id.includes('power') || id.includes('watt') || unit === 'w') && (id.includes('merach') || id.includes('bike'));
       });
 
       const bestResistance = candidates.find((c) => {
@@ -211,17 +218,17 @@ export class HomeAssistantService {
       const bestHeartRate = candidates.find((c) => {
         const id = c.entity_id.toLowerCase();
         const unit = (c.attributes?.unit_of_measurement || '').toLowerCase();
-        return id.includes('heart') || id.includes('pulse') || unit === 'bpm';
+        return (id.includes('heart') || id.includes('pulse') || unit === 'bpm') && (id.includes('merach') || id.includes('bike'));
       });
 
       const bestDistance = candidates.find((c) => {
         const id = c.entity_id.toLowerCase();
-        return (id.includes('distance') || id.includes('distancia'));
+        return (id.includes('distance') || id.includes('distancia')) && (id.includes('merach') || id.includes('bike'));
       });
 
       const bestCalories = candidates.find((c) => {
         const id = c.entity_id.toLowerCase();
-        return (id.includes('calorie') || id.includes('caloria') || id.includes('kcal'));
+        return (id.includes('calorie') || id.includes('caloria') || id.includes('kcal')) && (id.includes('merach') || id.includes('bike'));
       });
 
       return {
