@@ -205,8 +205,18 @@ export class HomeAssistantService {
 
       const bestPower = candidates.find((c) => {
         const id = c.entity_id.toLowerCase();
+        const fn = (c.attributes?.friendly_name || '').toLowerCase();
         const unit = (c.attributes?.unit_of_measurement || '').toLowerCase();
-        return (id.includes('power') || id.includes('watt') || unit === 'w') && (id.includes('merach') || id.includes('bike'));
+        return (
+          id.includes('power') ||
+          id.includes('potencia') ||
+          id.includes('potência') ||
+          id.includes('watt') ||
+          fn.includes('power') ||
+          fn.includes('potência') ||
+          fn.includes('potencia') ||
+          unit === 'w'
+        );
       });
 
       const bestResistance = candidates.find((c) => {
