@@ -473,9 +473,19 @@ export default function ConnectionSettingsModal({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 font-bold text-white text-[11px] truncate">
                             <span className="truncate">{s.name}</span>
-                            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-[10px] font-mono text-emerald-300 border border-emerald-500/30">
-                              {s.state} {s.unit}
-                            </span>
+                            {s.state === 'unavailable' || s.state === 'unknown' ? (
+                              <span 
+                                className="px-2 py-0.5 rounded bg-amber-500/20 text-[10px] font-sans text-amber-300 border border-amber-500/30 flex items-center gap-1"
+                                title="A bicicleta desliga o Bluetooth quando está parada para poupar energia. Ao pedalar volta a ligar."
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                Em Repouso (0 {s.unit || 'rpm'})
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-[10px] font-mono text-emerald-300 border border-emerald-500/30">
+                                {s.state} {s.unit}
+                              </span>
+                            )}
                           </div>
                           <p className="text-[10px] font-mono text-slate-400 truncate mt-0.5">{s.entity_id}</p>
                         </div>
