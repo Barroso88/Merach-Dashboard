@@ -166,7 +166,11 @@ export const DEFAULT_SETTINGS = {
   haEntities: {
     cadence: 'sensor.merach_bike_cadence',
     speed: 'sensor.merach_bike_speed',
-    resistance: 'number.merach_bike_resistance'
+    power: '',
+    resistance: '',
+    heartRate: '',
+    distance: '',
+    calories: ''
   }
 };
 

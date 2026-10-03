@@ -14,7 +14,12 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  Shield
+  Shield,
+  Zap,
+  Gauge,
+  Heart,
+  Flame,
+  Milestone
 } from 'lucide-react';
 
 export default function ConnectionSettingsModal({
@@ -33,6 +38,7 @@ export default function ConnectionSettingsModal({
   const [formData, setFormData] = useState({ ...settings });
   const [testingStatus, setTestingStatus] = useState(null);
   const [discoveringStatus, setDiscoveringStatus] = useState(null);
+  const [detectedSensors, setDetectedSensors] = useState([]);
   const [showCorsHelp, setShowCorsHelp] = useState(false);
   const [showCfTokens, setShowCfTokens] = useState(Boolean(settings?.cfClientId));
 
@@ -63,7 +69,7 @@ export default function ConnectionSettingsModal({
   };
 
   const handleDiscoverSensors = async () => {
-    setDiscoveringStatus({ loading: true, message: 'A procurar entidades no Home Assistant...' });
+    setDiscoveringStatus({ loading: true, message: 'A procurar todos os sensores no Home Assistant...' });
     haService.updateConfig({
       haUrl: formData.haUrl,
       haToken: formData.haToken,
@@ -73,16 +79,18 @@ export default function ConnectionSettingsModal({
 
     try {
       const res = await haService.discoverEntities();
+      setDetectedSensors(res.candidates || []);
       let updatedEntities = { ...formData.haEntities };
       let foundCount = 0;
 
-      if (res.suggestedCadence) {
-        updatedEntities.cadence = res.suggestedCadence;
-        foundCount++;
-      }
-      if (res.suggestedSpeed) {
-        updatedEntities.speed = res.suggestedSpeed;
-        foundCount++;
+      if (res.suggestions) {
+        if (res.suggestions.cadence) { updatedEntities.cadence = res.suggestions.cadence; foundCount++; }
+        if (res.suggestions.speed) { updatedEntities.speed = res.suggestions.speed; foundCount++; }
+        if (res.suggestions.power) { updatedEntities.power = res.suggestions.power; foundCount++; }
+        if (res.suggestions.resistance) { updatedEntities.resistance = res.suggestions.resistance; foundCount++; }
+        if (res.suggestions.heartRate) { updatedEntities.heartRate = res.suggestions.heartRate; foundCount++; }
+        if (res.suggestions.distance) { updatedEntities.distance = res.suggestions.distance; foundCount++; }
+        if (res.suggestions.calories) { updatedEntities.calories = res.suggestions.calories; foundCount++; }
       }
 
       setFormData((prev) => ({
@@ -93,9 +101,7 @@ export default function ConnectionSettingsModal({
       setDiscoveringStatus({
         loading: false,
         success: true,
-        message: foundCount > 0 
-          ? `Sucesso! Foram detetados ${foundCount} sensores Merach/ESP32 e preenchidos automaticamente.` 
-          : `Foram encontrados ${res.candidates.length} sensores, mas nenhum com o nome padrão exato. Pode selecioná-los manualmente.`
+        message: `Foram detetados ${res.candidates.length} sensores da bicicleta/ESP32 no Home Assistant! Veja a lista abaixo e associe-os livremente.`
       });
     } catch (err) {
       setDiscoveringStatus({
@@ -104,6 +110,16 @@ export default function ConnectionSettingsModal({
         message: err.message
       });
     }
+  };
+
+  const assignSensor = (key, entityId) => {
+    setFormData((prev) => ({
+      ...prev,
+      haEntities: {
+        ...prev.haEntities,
+        [key]: entityId
+      }
+    }));
   };
 
   const handleSave = () => {
@@ -359,32 +375,185 @@ export default function ConnectionSettingsModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Detected sensors interactive shelf */}
+              {detectedSensors.length > 0 && (
+                <div className={`p-3.5 rounded-2xl border space-y-2.5 max-h-60 overflow-y-auto animate-fadeIn ${
+                  isRose ? 'bg-[#290534]/90 border-[#ff2d75]/40 shadow-inner' : 'bg-slate-900/90 border-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between text-[11px] font-bold text-white">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      Todos os Sensores da Bicicleta no Home Assistant ({detectedSensors.length}):
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">Clique para associar rápido</span>
+                  </div>
+                  <div className="space-y-2">
+                    {detectedSensors.map((s) => (
+                      <div key={s.entity_id} className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 font-bold text-white text-[11px] truncate">
+                            <span className="truncate">{s.name}</span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-[10px] font-mono text-emerald-300 border border-emerald-500/30">
+                              {s.state} {s.unit}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-mono text-slate-400 truncate mt-0.5">{s.entity_id}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => assignSensor('cadence', s.entity_id)}
+                            className={`px-2 py-1 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
+                              formData.haEntities?.cadence === s.entity_id
+                                ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                                : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30'
+                            }`}
+                          >
+                            + Cadência
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => assignSensor('speed', s.entity_id)}
+                            className={`px-2 py-1 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
+                              formData.haEntities?.speed === s.entity_id
+                                ? 'bg-sky-500 text-slate-950 border-sky-400'
+                                : 'bg-sky-500/15 border-sky-500/30 text-sky-300 hover:bg-sky-500/30'
+                            }`}
+                          >
+                            + Velocidade
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => assignSensor('power', s.entity_id)}
+                            className={`px-2 py-1 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
+                              formData.haEntities?.power === s.entity_id
+                                ? 'bg-amber-500 text-slate-950 border-amber-400'
+                                : 'bg-amber-500/15 border-amber-500/30 text-amber-300 hover:bg-amber-500/30'
+                            }`}
+                          >
+                            + Potência
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => assignSensor('resistance', s.entity_id)}
+                            className={`px-2 py-1 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
+                              formData.haEntities?.resistance === s.entity_id
+                                ? 'bg-purple-500 text-white border-purple-400'
+                                : 'bg-purple-500/15 border-purple-500/30 text-purple-300 hover:bg-purple-500/30'
+                            }`}
+                          >
+                            + Resistência
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => assignSensor('heartRate', s.entity_id)}
+                            className={`px-2 py-1 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
+                              formData.haEntities?.heartRate === s.entity_id
+                                ? 'bg-rose-500 text-white border-rose-400'
+                                : 'bg-rose-500/15 border-rose-500/30 text-rose-300 hover:bg-rose-500/30'
+                            }`}
+                          >
+                            + Pulso
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Form mapping grid for all 6 metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* Cadência */}
                 <div>
-                  <label className={`block text-[10px] ${isRose ? 'text-purple-300' : 'text-slate-500'}`}>Cadência (RPM):</label>
+                  <label className={`block text-[10px] font-semibold mb-1 ${isRose ? 'text-purple-300' : 'text-slate-400'}`}>
+                    Cadência (RPM):
+                  </label>
                   <input
                     type="text"
                     value={formData.haEntities?.cadence || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      haEntities: { ...formData.haEntities, cadence: e.target.value }
-                    })}
+                    onChange={(e) => assignSensor('cadence', e.target.value)}
                     placeholder="sensor.merach_bike_cadence"
                     className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
                       themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
                     }`}
                   />
                 </div>
+
+                {/* Velocidade */}
                 <div>
-                  <label className={`block text-[10px] ${isRose ? 'text-pink-300' : 'text-slate-500'}`}>Velocidade (km/h):</label>
+                  <label className={`block text-[10px] font-semibold mb-1 ${isRose ? 'text-pink-300' : 'text-slate-400'}`}>
+                    Velocidade (km/h):
+                  </label>
                   <input
                     type="text"
                     value={formData.haEntities?.speed || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      haEntities: { ...formData.haEntities, speed: e.target.value }
-                    })}
+                    onChange={(e) => assignSensor('speed', e.target.value)}
                     placeholder="sensor.merach_bike_speed"
+                    className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
+                      themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                    }`}
+                  />
+                </div>
+
+                {/* Potência */}
+                <div>
+                  <label className="block text-[10px] font-semibold mb-1 text-amber-300">
+                    Potência (Watts):
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.haEntities?.power || ''}
+                    onChange={(e) => assignSensor('power', e.target.value)}
+                    placeholder="sensor.merach_bike_power"
+                    className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
+                      themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                    }`}
+                  />
+                </div>
+
+                {/* Resistência */}
+                <div>
+                  <label className="block text-[10px] font-semibold mb-1 text-purple-300">
+                    Resistência (Nível 1-32):
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.haEntities?.resistance || ''}
+                    onChange={(e) => assignSensor('resistance', e.target.value)}
+                    placeholder="sensor.merach_bike_resistance"
+                    className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
+                      themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                    }`}
+                  />
+                </div>
+
+                {/* Frequência Cardíaca */}
+                <div>
+                  <label className="block text-[10px] font-semibold mb-1 text-rose-300">
+                    Frequência Cardíaca (BPM):
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.haEntities?.heartRate || ''}
+                    onChange={(e) => assignSensor('heartRate', e.target.value)}
+                    placeholder="sensor.merach_bike_heart_rate"
+                    className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
+                      themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                    }`}
+                  />
+                </div>
+
+                {/* Distância */}
+                <div>
+                  <label className="block text-[10px] font-semibold mb-1 text-sky-300">
+                    Distância da Bike (km - opcional):
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.haEntities?.distance || ''}
+                    onChange={(e) => assignSensor('distance', e.target.value)}
+                    placeholder="sensor.merach_bike_distance"
                     className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
                       themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
                     }`}

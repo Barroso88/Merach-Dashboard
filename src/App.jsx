@@ -82,10 +82,13 @@ export default function App() {
     localStorage.setItem('merach_target_seconds', String(sec));
   };
 
-  // Official Merach Telemetry (Cadence, Speed)
+  // Official Merach Telemetry (Cadence, Speed, Power, Resistance, Heart Rate)
   const [telemetry, setTelemetry] = useState({
     cadence: 0,
-    speed: 0
+    speed: 0,
+    power: 0,
+    resistance: 0,
+    heartRate: 0
   });
 
   // Session Cumulative Stats
@@ -163,14 +166,22 @@ export default function App() {
 
   // Apply tick data to session aggregates
   const applyTick = (tick, currentSec, timeLabel) => {
-    setTelemetry(tick);
+    setTelemetry({
+      cadence: tick.cadence ?? 0,
+      speed: tick.speed ?? 0,
+      power: tick.power ?? 0,
+      resistance: tick.resistance ?? 0,
+      heartRate: tick.heartRate ?? 0
+    });
 
     // Record sample for detailed replay
     if (currentSec % 3 === 0 || currentSec <= 10) {
       sessionSamplesRef.current.push({
         time: `${Math.round(currentSec / 60)}m`,
         cadence: tick.cadence,
-        speed: tick.speed
+        speed: tick.speed,
+        power: tick.power,
+        resistance: tick.resistance
       });
     }
 
@@ -190,8 +201,14 @@ export default function App() {
       const distIncrement = tick.speed / 3600; // km per second
       // Official calorie formula based on speed and cadence
       const calPerSecond = ((tick.speed * 0.22) + (tick.cadence * 0.05)) / 60;
-      const newDistance = Number((prev.distanceKm + distIncrement).toFixed(2));
-      const newCalories = Math.round(prev.caloriesKcal + calPerSecond);
+      
+      const newDistance = tick.distance !== null && tick.distance !== undefined && !isNaN(tick.distance)
+        ? Number(Number(tick.distance).toFixed(2))
+        : Number((prev.distanceKm + distIncrement).toFixed(2));
+
+      const newCalories = tick.calories !== null && tick.calories !== undefined && !isNaN(tick.calories)
+        ? Math.round(Number(tick.calories))
+        : Math.round(prev.caloriesKcal + calPerSecond);
 
       const count = prev.samplesCount + 1;
       const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + tick.speed) / count).toFixed(1));

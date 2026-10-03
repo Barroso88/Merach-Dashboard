@@ -191,6 +191,27 @@ export default function LiveDashboard({
                 </div>
               </div>
 
+              {/* Optional Advanced Merach Bike Sensors (Power, Resistance, Heart Rate) */}
+              {(telemetry?.power > 0 || telemetry?.resistance > 0 || telemetry?.heartRate > 0) && (
+                <div className="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-white/10 text-center font-mono animate-fadeIn">
+                  {/* Potência */}
+                  <div className="p-1.5 rounded-xl bg-white/5 border border-amber-500/30">
+                    <span className="block text-[8px] font-bold text-amber-300 uppercase tracking-wider">Potência</span>
+                    <span className="text-sm font-black text-white">{telemetry.power || '--'} <span className="text-[9px] text-amber-300">W</span></span>
+                  </div>
+                  {/* Resistência */}
+                  <div className="p-1.5 rounded-xl bg-white/5 border border-purple-500/30">
+                    <span className="block text-[8px] font-bold text-purple-300 uppercase tracking-wider">Resist.</span>
+                    <span className="text-sm font-black text-white">{telemetry.resistance || '--'} <span className="text-[9px] text-purple-300">Nv</span></span>
+                  </div>
+                  {/* Frequência Cardíaca */}
+                  <div className="p-1.5 rounded-xl bg-white/5 border border-rose-500/30">
+                    <span className="block text-[8px] font-bold text-rose-300 uppercase tracking-wider">Pulso</span>
+                    <span className="text-sm font-black text-white">{telemetry.heartRate || '--'} <span className="text-[9px] text-rose-300">bpm</span></span>
+                  </div>
+                </div>
+              )}
+
               {/* Micro Telemetry Footer inside the Center HUD */}
               <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400">
                 <div className="flex items-center gap-1">

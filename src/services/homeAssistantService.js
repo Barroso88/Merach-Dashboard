@@ -8,7 +8,12 @@ export class HomeAssistantService {
     this.cfClientSecret = config.cfClientSecret || '';
     this.entities = config.haEntities || {
       cadence: 'sensor.merach_bike_cadence',
-      speed: 'sensor.merach_bike_speed'
+      speed: 'sensor.merach_bike_speed',
+      power: '',
+      resistance: '',
+      heartRate: '',
+      distance: '',
+      calories: ''
     };
     this.isConnected = false;
     this.lastError = null;
@@ -80,11 +85,19 @@ export class HomeAssistantService {
         this.isConnected = true;
         this.lastError = null;
 
-        // Try reading current states of cadence and speed entities to give instant feedback
+        // Try reading current states of mapped entities to give instant feedback
         let entityDetails = '';
         try {
           const telemetry = await this.fetchTelemetry();
-          entityDetails = ` | Sensores lidos: Cadência: ${telemetry.cadence} RPM, Vel: ${telemetry.speed} km/h`;
+          const parts = [];
+          if (this.entities.cadence) parts.push(`Cadência: ${telemetry.cadence} RPM`);
+          if (this.entities.speed) parts.push(`Vel: ${telemetry.speed} km/h`);
+          if (this.entities.power) parts.push(`Potência: ${telemetry.power} W`);
+          if (this.entities.resistance) parts.push(`Resistência: ${telemetry.resistance}`);
+          if (this.entities.heartRate) parts.push(`Pulso: ${telemetry.heartRate} BPM`);
+          if (parts.length > 0) {
+            entityDetails = ` | Sensores ativos: ${parts.join(', ')}`;
+          }
         } catch {
           // If entities aren't found yet, the API connection itself is verified
         }
@@ -148,20 +161,28 @@ export class HomeAssistantService {
 
       const states = await response.json();
       
-      // Filter candidates for Merach / ESP32 cycling entities
+      // Filter candidates for Merach / ESP32 cycling entities across all types
       const candidates = states.filter((s) => {
         const id = s.entity_id.toLowerCase();
         const fn = (s.attributes?.friendly_name || '').toLowerCase();
         const unit = (s.attributes?.unit_of_measurement || '').toLowerCase();
+        const dc = (s.attributes?.device_class || '').toLowerCase();
         return (
           id.includes('cadence') || id.includes('speed') || id.includes('merach') || 
           id.includes('bike') || id.includes('cycling') || id.includes('rpm') ||
-          unit === 'rpm' || unit === 'km/h' ||
-          fn.includes('merach') || fn.includes('cadênc') || fn.includes('cadence') || fn.includes('veloc')
+          id.includes('power') || id.includes('watt') || id.includes('resistance') ||
+          id.includes('resistencia') || id.includes('heart') || id.includes('pulse') ||
+          id.includes('cardiac') || id.includes('esp32') || id.includes('ble') ||
+          id.includes('distance') || id.includes('distancia') || id.includes('calorie') ||
+          id.includes('caloria') || id.includes('kcal') ||
+          unit === 'rpm' || unit === 'km/h' || unit === 'w' || unit === 'bpm' ||
+          dc === 'power' || dc === 'speed' || dc === 'distance' ||
+          fn.includes('merach') || fn.includes('cadênc') || fn.includes('veloc') ||
+          fn.includes('potênc') || fn.includes('resistênc') || fn.includes('cardíac')
         );
       });
 
-      // Best auto matches
+      // Best auto matches for each category
       const bestCadence = candidates.find((c) => {
         const id = c.entity_id.toLowerCase();
         const unit = (c.attributes?.unit_of_measurement || '').toLowerCase();
@@ -174,6 +195,35 @@ export class HomeAssistantService {
         return id.includes('speed') || (unit.includes('km/h') && (id.includes('bike') || id.includes('merach')));
       });
 
+      const bestPower = candidates.find((c) => {
+        const id = c.entity_id.toLowerCase();
+        const unit = (c.attributes?.unit_of_measurement || '').toLowerCase();
+        const dc = (c.attributes?.device_class || '').toLowerCase();
+        return (id.includes('power') || id.includes('watt') || unit === 'w' || dc === 'power');
+      });
+
+      const bestResistance = candidates.find((c) => {
+        const id = c.entity_id.toLowerCase();
+        const fn = (c.attributes?.friendly_name || '').toLowerCase();
+        return id.includes('resistance') || id.includes('resistencia') || fn.includes('resistênc');
+      });
+
+      const bestHeartRate = candidates.find((c) => {
+        const id = c.entity_id.toLowerCase();
+        const unit = (c.attributes?.unit_of_measurement || '').toLowerCase();
+        return id.includes('heart') || id.includes('pulse') || unit === 'bpm';
+      });
+
+      const bestDistance = candidates.find((c) => {
+        const id = c.entity_id.toLowerCase();
+        return (id.includes('distance') || id.includes('distancia'));
+      });
+
+      const bestCalories = candidates.find((c) => {
+        const id = c.entity_id.toLowerCase();
+        return (id.includes('calorie') || id.includes('caloria') || id.includes('kcal'));
+      });
+
       return {
         success: true,
         candidates: candidates.map(c => ({
@@ -182,8 +232,15 @@ export class HomeAssistantService {
           state: c.state,
           unit: c.attributes?.unit_of_measurement || ''
         })),
-        suggestedCadence: bestCadence ? bestCadence.entity_id : null,
-        suggestedSpeed: bestSpeed ? bestSpeed.entity_id : null
+        suggestions: {
+          cadence: bestCadence ? bestCadence.entity_id : null,
+          speed: bestSpeed ? bestSpeed.entity_id : null,
+          power: bestPower ? bestPower.entity_id : null,
+          resistance: bestResistance ? bestResistance.entity_id : null,
+          heartRate: bestHeartRate ? bestHeartRate.entity_id : null,
+          distance: bestDistance ? bestDistance.entity_id : null,
+          calories: bestCalories ? bestCalories.entity_id : null
+        }
       };
     } catch (err) {
       const isCorsOrNetwork = err.name === 'TypeError' || err.message?.includes('Failed to fetch');
@@ -214,14 +271,24 @@ export class HomeAssistantService {
         }
       };
 
-      const [cadence, speed] = await Promise.all([
+      const [cadence, speed, power, resistance, heartRate, distance, calories] = await Promise.all([
         fetchEntity(this.entities.cadence),
-        fetchEntity(this.entities.speed)
+        fetchEntity(this.entities.speed),
+        fetchEntity(this.entities.power),
+        fetchEntity(this.entities.resistance),
+        fetchEntity(this.entities.heartRate),
+        fetchEntity(this.entities.distance),
+        fetchEntity(this.entities.calories)
       ]);
 
       return {
         cadence: cadence ?? 0,
-        speed: speed ?? 0
+        speed: speed ?? 0,
+        power: power ?? 0,
+        resistance: resistance ?? 0,
+        heartRate: heartRate ?? 0,
+        distance: distance !== null && !isNaN(distance) ? distance : null,
+        calories: calories !== null && !isNaN(calories) ? calories : null
       };
     } catch (err) {
       console.warn('Failed to fetch telemetry from Home Assistant:', err);
