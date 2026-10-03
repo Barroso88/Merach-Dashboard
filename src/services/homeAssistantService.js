@@ -34,6 +34,37 @@ export class HomeAssistantService {
     return headers;
   }
 
+  // Smart request helper: tries direct fetch first, and automatically falls back to /ha-proxy on CORS errors
+  async request(path, method = 'GET') {
+    const directUrl = `${this.url}${path}`;
+    const headers = this.getHeaders();
+
+    try {
+      const res = await fetch(directUrl, {
+        method,
+        headers,
+        signal: AbortSignal.timeout(4000)
+      });
+      return res;
+    } catch (directErr) {
+      const isCorsOrNetwork = directErr.name === 'TypeError' || directErr.message?.includes('Failed to fetch');
+      if (isCorsOrNetwork) {
+        try {
+          const proxyUrl = `/ha-proxy?target=${encodeURIComponent(directUrl)}`;
+          const proxyRes = await fetch(proxyUrl, {
+            method,
+            headers,
+            signal: AbortSignal.timeout(8000)
+          });
+          return proxyRes;
+        } catch {
+          throw directErr;
+        }
+      }
+      throw directErr;
+    }
+  }
+
   async testConnection() {
     if (!this.token) {
       return { 
@@ -43,11 +74,7 @@ export class HomeAssistantService {
     }
 
     try {
-      const response = await fetch(`${this.url}/api/`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-        signal: AbortSignal.timeout(5000)
-      });
+      const response = await this.request('/api/');
 
       if (response.ok) {
         this.isConnected = true;
@@ -59,7 +86,7 @@ export class HomeAssistantService {
           const telemetry = await this.fetchTelemetry();
           entityDetails = ` | Sensores lidos: Cadência: ${telemetry.cadence} RPM, Vel: ${telemetry.speed} km/h`;
         } catch {
-          // It's ok if entities aren't found yet, the API connection itself is verified
+          // If entities aren't found yet, the API connection itself is verified
         }
 
         return { 
@@ -101,7 +128,7 @@ export class HomeAssistantService {
         success: false, 
         isCors: isCorsOrNetwork,
         message: isCorsOrNetwork 
-          ? `Não foi possível alcançar ${this.url}. Verifique o IP/URL e se o CORS está ativo no Home Assistant.`
+          ? `Não foi possível alcançar ${this.url}. Verifique se o endereço está acessível no seu browser ou rede local.`
           : `Erro de ligação: ${err.message}` 
       };
     }
@@ -113,11 +140,7 @@ export class HomeAssistantService {
     }
 
     try {
-      const response = await fetch(`${this.url}/api/states`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-        signal: AbortSignal.timeout(6000)
-      });
+      const response = await this.request('/api/states');
 
       if (!response.ok) {
         throw new Error(`Erro HTTP ${response.status} ao consultar entidades.`);
@@ -166,7 +189,7 @@ export class HomeAssistantService {
       const isCorsOrNetwork = err.name === 'TypeError' || err.message?.includes('Failed to fetch');
       throw new Error(
         isCorsOrNetwork 
-          ? `Falha ao aceder à API (${this.url}). Confirme se o Home Assistant permite CORS para a origem do dashboard.`
+          ? `Falha ao aceder à API (${this.url}). Confirme se o Home Assistant está acessível.`
           : err.message
       );
     }
@@ -181,10 +204,7 @@ export class HomeAssistantService {
       const fetchEntity = async (entityId) => {
         if (!entityId) return null;
         try {
-          const res = await fetch(`${this.url}/api/states/${entityId}`, {
-            headers: this.getHeaders(),
-            signal: AbortSignal.timeout(3000)
-          });
+          const res = await this.request(`/api/states/${entityId}`);
           if (!res.ok) return null;
           const json = await res.json();
           const val = parseFloat(json.state);
