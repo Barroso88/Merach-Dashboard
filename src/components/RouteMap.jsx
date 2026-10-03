@@ -61,6 +61,30 @@ export default function RouteMap({
     return getRiderPositionAlongRoute(currentRoute, currentDistanceKm);
   }, [currentRoute, currentDistanceKm]);
 
+  const getTileConfig = (style) => {
+    switch (style) {
+      case 'street':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+          maxZoom: 19,
+          attribution: '&copy; Esri World Street Map'
+        };
+      case 'dark':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+          maxZoom: 16,
+          attribution: '&copy; Esri Dark Canvas'
+        };
+      case 'satellite':
+      default:
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          maxZoom: 19,
+          attribution: '&copy; Esri World Imagery'
+        };
+    }
+  };
+
   // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -79,14 +103,11 @@ export default function RouteMap({
       // Add zoom control to top-right
       L.control.zoom({ position: 'topright' }).addTo(map);
 
-      // Official OpenStreetMap Tile Layer (100% Free, No API Key, No Watermark)
-      const tileUrl = mapStyle === 'cycling'
-        ? 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
-        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-      const tileLayer = L.tileLayer(tileUrl, {
-        maxZoom: 19,
-        subdomains: mapStyle === 'cycling' ? 'abc' : ''
+      // Free High Definition Tile Layer (No API Key Required, No Watermarks)
+      const tileCfg = getTileConfig(mapStyle);
+      const tileLayer = L.tileLayer(tileCfg.url, {
+        maxZoom: tileCfg.maxZoom,
+        attribution: tileCfg.attribution
       }).addTo(map);
 
       tileLayerRef.current = tileLayer;
@@ -101,18 +122,15 @@ export default function RouteMap({
     };
   }, []);
 
-  // Switch Tile Style (Dark / Standard OSM / CyclOSM)
+  // Switch Tile Style (Satellite / Street / Dark)
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
     mapInstanceRef.current.removeLayer(tileLayerRef.current);
 
-    const tileUrl = mapStyle === 'cycling'
-      ? 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
-      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-    tileLayerRef.current = L.tileLayer(tileUrl, {
-      maxZoom: 19,
-      subdomains: mapStyle === 'cycling' ? 'abc' : ''
+    const tileCfg = getTileConfig(mapStyle);
+    tileLayerRef.current = L.tileLayer(tileCfg.url, {
+      maxZoom: tileCfg.maxZoom,
+      attribution: tileCfg.attribution
     }).addTo(mapInstanceRef.current);
   }, [mapStyle]);
 
@@ -289,7 +307,7 @@ export default function RouteMap({
         isRose ? 'border-[#ff2d75]/40 shadow-[0_0_35px_-5px_rgba(255,45,117,0.3)]' : 'border-sky-500/30 shadow-[0_0_35px_-5px_rgba(56,189,248,0.25)]'
       }`}>
         {/* Real Leaflet Map */}
-        <div ref={mapContainerRef} className={`w-full h-full z-0 ${mapStyle === 'dark' ? 'leaflet-dark-tiles' : ''}`} />
+        <div ref={mapContainerRef} className="w-full h-full z-0" />
 
         {/* TOP HUD BAR: Route Title, Selector & GPX Upload */}
         <div className="absolute top-4 left-4 right-16 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
@@ -479,22 +497,23 @@ export default function RouteMap({
             <Compass className={`w-5 h-5 ${autoFollow ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
           </button>
 
-          {/* Map Layer Mode Switcher: Dark vs Standard OSM vs CyclOSM */}
+          {/* Map Layer Mode Switcher: Satélite vs Ruas vs Modo Escuro */}
           <button
             type="button"
             onClick={() => {
               setMapStyle(prev => {
-                if (prev === 'dark') return 'standard';
-                if (prev === 'standard') return 'cycling';
-                return 'dark';
+                if (prev === 'satellite') return 'street';
+                if (prev === 'street') return 'dark';
+                return 'satellite';
               });
             }}
-            className="w-10 h-10 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/70 hover:bg-black/90 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer shadow-lg"
-            title={`Estilo Atual: ${
-              mapStyle === 'dark' ? 'Modo Escuro Neon' : mapStyle === 'standard' ? 'OpenStreetMap Padrão' : 'Ciclovias (CyclOSM)'
-            } (Clica para alternar)`}
+            className="px-2.5 h-10 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/75 hover:bg-black/90 flex items-center gap-2 text-slate-200 hover:text-white transition-all cursor-pointer shadow-lg"
+            title="Mudar estilo de mapa (Satélite Real, Ruas ou Modo Escuro)"
           >
-            <Layers className="w-5 h-5" />
+            <Layers className="w-4 h-4 text-sky-400" />
+            <span className="text-[10px] font-bold hidden sm:inline">
+              {mapStyle === 'satellite' ? '🛰️ Satélite' : mapStyle === 'street' ? '🗺️ Ruas' : '🌑 Escuro'}
+            </span>
           </button>
         </div>
       </div>
