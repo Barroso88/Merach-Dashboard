@@ -79,14 +79,14 @@ export default function RouteMap({
       // Add zoom control to top-right
       L.control.zoom({ position: 'topright' }).addTo(map);
 
-      // Tile Layer (CartoDB Dark Matter)
-      const tileUrl = mapStyle === 'dark'
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      // Official OpenStreetMap Tile Layer (100% Free, No API Key, No Watermark)
+      const tileUrl = mapStyle === 'cycling'
+        ? 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
+        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
       const tileLayer = L.tileLayer(tileUrl, {
         maxZoom: 19,
-        subdomains: 'abcd'
+        subdomains: mapStyle === 'cycling' ? 'abc' : ''
       }).addTo(map);
 
       tileLayerRef.current = tileLayer;
@@ -101,18 +101,18 @@ export default function RouteMap({
     };
   }, []);
 
-  // Switch Tile Style (Dark vs OSM Standard)
+  // Switch Tile Style (Dark / Standard OSM / CyclOSM)
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
     mapInstanceRef.current.removeLayer(tileLayerRef.current);
 
-    const tileUrl = mapStyle === 'dark'
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const tileUrl = mapStyle === 'cycling'
+      ? 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
+      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     tileLayerRef.current = L.tileLayer(tileUrl, {
       maxZoom: 19,
-      subdomains: 'abcd'
+      subdomains: mapStyle === 'cycling' ? 'abc' : ''
     }).addTo(mapInstanceRef.current);
   }, [mapStyle]);
 
@@ -289,7 +289,7 @@ export default function RouteMap({
         isRose ? 'border-[#ff2d75]/40 shadow-[0_0_35px_-5px_rgba(255,45,117,0.3)]' : 'border-sky-500/30 shadow-[0_0_35px_-5px_rgba(56,189,248,0.25)]'
       }`}>
         {/* Real Leaflet Map */}
-        <div ref={mapContainerRef} className="w-full h-full z-0" />
+        <div ref={mapContainerRef} className={`w-full h-full z-0 ${mapStyle === 'dark' ? 'leaflet-dark-tiles' : ''}`} />
 
         {/* TOP HUD BAR: Route Title, Selector & GPX Upload */}
         <div className="absolute top-4 left-4 right-16 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
@@ -479,12 +479,20 @@ export default function RouteMap({
             <Compass className={`w-5 h-5 ${autoFollow ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
           </button>
 
-          {/* Map Layer Mode (Dark Matter vs OpenStreetMap Standard) */}
+          {/* Map Layer Mode Switcher: Dark vs Standard OSM vs CyclOSM */}
           <button
             type="button"
-            onClick={() => setMapStyle(prev => prev === 'dark' ? 'standard' : 'dark')}
+            onClick={() => {
+              setMapStyle(prev => {
+                if (prev === 'dark') return 'standard';
+                if (prev === 'standard') return 'cycling';
+                return 'dark';
+              });
+            }}
             className="w-10 h-10 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/70 hover:bg-black/90 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer shadow-lg"
-            title={mapStyle === 'dark' ? 'Mudar para Mapa Padrão OpenStreetMap' : 'Mudar para Mapa Dark Matter'}
+            title={`Estilo Atual: ${
+              mapStyle === 'dark' ? 'Modo Escuro Neon' : mapStyle === 'standard' ? 'OpenStreetMap Padrão' : 'Ciclovias (CyclOSM)'
+            } (Clica para alternar)`}
           >
             <Layers className="w-5 h-5" />
           </button>

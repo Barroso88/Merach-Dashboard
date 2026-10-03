@@ -67,3 +67,12 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+/* Sleek Dark Mode for OpenStreetMap tiles without any third-party API key or watermark */
+.leaflet-dark-tiles .leaflet-tile {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(125%) grayscale(25%);
+}
+
+.leaflet-container {
+  background-color: #0b0f19 !important;
+}
