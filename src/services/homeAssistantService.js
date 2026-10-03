@@ -2,8 +2,10 @@
 
 export class HomeAssistantService {
   constructor(config = {}) {
-    this.url = (config.haUrl || 'http://homeassistant.local:8123').replace(/\/$/, '');
+    this.url = (config.haUrl || 'https://ha.barrosoportal.com').replace(/\/$/, '');
     this.token = config.haToken || '';
+    this.cfClientId = config.cfClientId || '';
+    this.cfClientSecret = config.cfClientSecret || '';
     this.entities = config.haEntities || {
       cadence: 'sensor.merach_bike_cadence',
       speed: 'sensor.merach_bike_speed'
@@ -15,14 +17,21 @@ export class HomeAssistantService {
   updateConfig(config) {
     if (config.haUrl) this.url = config.haUrl.replace(/\/$/, '');
     if (config.haToken !== undefined) this.token = config.haToken;
+    if (config.cfClientId !== undefined) this.cfClientId = config.cfClientId;
+    if (config.cfClientSecret !== undefined) this.cfClientSecret = config.cfClientSecret;
     if (config.haEntities) this.entities = { ...this.entities, ...config.haEntities };
   }
 
   getHeaders() {
-    return {
+    const headers = {
       'Authorization': `Bearer ${this.token}`,
       'Content-Type': 'application/json'
     };
+    if (this.cfClientId && this.cfClientSecret) {
+      headers['CF-Access-Client-Id'] = this.cfClientId.trim();
+      headers['CF-Access-Client-Secret'] = this.cfClientSecret.trim();
+    }
+    return headers;
   }
 
   async testConnection() {
@@ -62,6 +71,20 @@ export class HomeAssistantService {
         return { 
           success: false, 
           message: 'Erro 401: Token de autorização inválido ou expirado.' 
+        };
+      } else if (response.status === 403) {
+        const text = await response.text();
+        this.isConnected = false;
+        if (text.includes('not allowed by policy') || text.includes('Cloudflare')) {
+          return {
+            success: false,
+            isCloudflarePolicy: true,
+            message: 'Erro 403: Bloqueado pela política do Cloudflare Access (Zero Trust). Requer regra de Bypass para /api/* ou Service Token.'
+          };
+        }
+        return {
+          success: false,
+          message: 'Erro 403: Acesso negado pelo Home Assistant.'
         };
       } else {
         this.isConnected = false;

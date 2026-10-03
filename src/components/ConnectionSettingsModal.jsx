@@ -13,7 +13,8 @@ import {
   Sparkles,
   HelpCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Shield
 } from 'lucide-react';
 
 export default function ConnectionSettingsModal({
@@ -33,12 +34,15 @@ export default function ConnectionSettingsModal({
   const [testingStatus, setTestingStatus] = useState(null);
   const [discoveringStatus, setDiscoveringStatus] = useState(null);
   const [showCorsHelp, setShowCorsHelp] = useState(false);
+  const [showCfTokens, setShowCfTokens] = useState(Boolean(settings?.cfClientId));
 
   const handleTestConnection = async () => {
     setTestingStatus({ loading: true, message: 'A testar conexão ao Home Assistant...' });
     haService.updateConfig({
       haUrl: formData.haUrl,
       haToken: formData.haToken,
+      cfClientId: formData.cfClientId,
+      cfClientSecret: formData.cfClientSecret,
       haEntities: formData.haEntities
     });
 
@@ -47,10 +51,14 @@ export default function ConnectionSettingsModal({
       loading: false,
       success: result.success,
       isCors: result.isCors,
+      isCloudflarePolicy: result.isCloudflarePolicy,
       message: result.message
     });
-    if (result.isCors) {
+    if (result.isCors || result.isCloudflarePolicy) {
       setShowCorsHelp(true);
+      if (result.isCloudflarePolicy) {
+        setShowCfTokens(true);
+      }
     }
   };
 
@@ -58,7 +66,9 @@ export default function ConnectionSettingsModal({
     setDiscoveringStatus({ loading: true, message: 'A procurar entidades no Home Assistant...' });
     haService.updateConfig({
       haUrl: formData.haUrl,
-      haToken: formData.haToken
+      haToken: formData.haToken,
+      cfClientId: formData.cfClientId,
+      cfClientSecret: formData.cfClientSecret
     });
 
     try {
@@ -202,14 +212,42 @@ export default function ConnectionSettingsModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={`block font-semibold mb-1 ${isRose ? 'text-pink-200' : 'text-slate-400'}`}>
-                  URL do Home Assistant
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={`block font-semibold ${isRose ? 'text-pink-200' : 'text-slate-400'}`}>
+                    URL do Home Assistant
+                  </label>
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, haUrl: 'https://ha.barrosoportal.com' })}
+                      className={`px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                        formData.haUrl?.includes('ha.barrosoportal.com')
+                          ? isRose ? 'bg-[#ff2d75]/30 border-[#ff2d75] text-white' : 'bg-sky-500/25 border-sky-400 text-sky-200'
+                          : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                      title="Usar túnel Cloudflare"
+                    >
+                      ha.barrosoportal.com
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, haUrl: 'http://homeassistant.local:8123' })}
+                      className={`px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                        formData.haUrl?.includes(':8123')
+                          ? isRose ? 'bg-[#ff2d75]/30 border-[#ff2d75] text-white' : 'bg-sky-500/25 border-sky-400 text-sky-200'
+                          : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                      title="Usar endereço local"
+                    >
+                      Local :8123
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="text"
                   value={formData.haUrl}
                   onChange={(e) => setFormData({ ...formData, haUrl: e.target.value })}
-                  placeholder="http://homeassistant.local:8123"
+                  placeholder="https://ha.barrosoportal.com"
                   className={`w-full rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none transition-colors border ${
                     themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 focus:border-sky-500'
                   }`}
@@ -233,6 +271,57 @@ export default function ConnectionSettingsModal({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Optional Cloudflare Access Service Token Inputs */}
+            <div className="pt-0.5">
+              <button
+                type="button"
+                onClick={() => setShowCfTokens(!showCfTokens)}
+                className={`text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  isRose ? 'text-purple-300 hover:text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Autenticação Cloudflare Access (Zero Trust) {formData.cfClientId ? '✓ Ativo' : '(Opcional)'}</span>
+                {showCfTokens ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              {showCfTokens && (
+                <div className={`mt-2 p-3 rounded-2xl border space-y-2.5 animate-fadeIn ${
+                  isRose ? 'bg-[#290534] border-[#9400D3]/40' : 'bg-slate-900/90 border-slate-800'
+                }`}>
+                  <p className="text-[10px] text-slate-300 leading-relaxed">
+                    Se o túnel <code>ha.barrosoportal.com</code> estiver protegido por regras do Cloudflare Access, insira aqui o Service Token (ou crie uma regra de Bypass para <code>/api/*</code> no painel da Cloudflare):
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1">CF-Access-Client-Id:</label>
+                      <input
+                        type="text"
+                        value={formData.cfClientId || ''}
+                        onChange={(e) => setFormData({ ...formData, cfClientId: e.target.value })}
+                        placeholder="xxxxxxxx.access"
+                        className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
+                          themeConfig?.modalInputClass || 'bg-slate-950 border-slate-800 text-slate-200'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1">CF-Access-Client-Secret:</label>
+                      <input
+                        type="password"
+                        value={formData.cfClientSecret || ''}
+                        onChange={(e) => setFormData({ ...formData, cfClientSecret: e.target.value })}
+                        placeholder="••••••••••••••••"
+                        className={`w-full rounded-lg px-2.5 py-1.5 font-mono text-[11px] border ${
+                          themeConfig?.modalInputClass || 'bg-slate-950 border-slate-800 text-slate-200'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Entity IDs (Cadence & Speed) */}

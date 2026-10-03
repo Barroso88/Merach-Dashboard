@@ -159,8 +159,10 @@ export function resetWorkoutsToDefault() {
 export const DEFAULT_SETTINGS = {
   mode: 'simulation', // 'simulation' | 'homeassistant'
   weightKg: 75,
-  haUrl: 'http://homeassistant.local:8123',
+  haUrl: 'https://ha.barrosoportal.com',
   haToken: '',
+  cfClientId: '',
+  cfClientSecret: '',
   haEntities: {
     cadence: 'sensor.merach_bike_cadence',
     speed: 'sensor.merach_bike_speed',
