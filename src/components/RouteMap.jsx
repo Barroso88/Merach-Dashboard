@@ -9,14 +9,18 @@ import {
   Check,
   ChevronDown,
   Layers,
-  Car
+  Car,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import {
   PRESET_ROUTES,
   parseGpxRoute,
   getRiderPositionAlongRoute
 } from '../services/routesData';
+import { getStoredCustomRoutes, deleteCustomRoute } from '../services/routePlannerService';
 import CarView3DMap from './CarView3DMap';
+import RoutePlannerModal from './RoutePlannerModal';
 import { getStoredSettings } from '../services/storageService';
 
 export default function RouteMap({
@@ -44,10 +48,17 @@ export default function RouteMap({
   // View Mode: 'frontal3d' (default - Visão Frontal Carro 3D) | 'aerial2d' (Visão Aérea 2D)
   const [viewMode, setViewMode] = useState('frontal3d');
 
-  // Routes state
-  const [routesList, setRoutesList] = useState(PRESET_ROUTES);
-  const [selectedRouteId, setSelectedRouteId] = useState(PRESET_ROUTES[0].id);
+  // Routes state: Stored custom routes + official presets
+  const [routesList, setRoutesList] = useState(() => {
+    const custom = getStoredCustomRoutes();
+    return [...custom, ...PRESET_ROUTES];
+  });
+  const [selectedRouteId, setSelectedRouteId] = useState(() => {
+    const custom = getStoredCustomRoutes();
+    return custom.length > 0 ? custom[0].id : PRESET_ROUTES[0].id;
+  });
   const [isRouteSelectorOpen, setIsRouteSelectorOpen] = useState(false);
+  const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   // Active route
@@ -161,27 +172,54 @@ export default function RouteMap({
                   isRose ? 'bg-[#1e0326]/95 border-[#ff2d75]/50' : 'bg-slate-950/95 border-slate-800'
                 }`}>
                   <div className="flex items-center justify-between px-2 py-1 mb-2 border-b border-white/10">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Escolher Percurso Real</span>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-1 text-[10px] font-bold text-sky-400 hover:text-white cursor-pointer"
-                    >
-                      <Upload className="w-3 h-3" />
-                      <span>Carregar .GPX</span>
-                    </button>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Percursos Reais</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRouteSelectorOpen(false);
+                          setIsRoutePlannerOpen(true);
+                        }}
+                        className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-white cursor-pointer"
+                        title="Criar novo percurso com partida e chegada"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Novo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1 text-[10px] font-bold text-sky-400 hover:text-white cursor-pointer"
+                        title="Carregar ficheiro .GPX"
+                      >
+                        <Upload className="w-3 h-3" />
+                        <span>GPX</span>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Create New Route Prominent Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRouteSelectorOpen(false);
+                      setIsRoutePlannerOpen(true);
+                    }}
+                    className={`w-full mb-2 p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-black transition-all cursor-pointer shadow-md ${
+                      isRose
+                        ? 'bg-[#ff2d75]/20 border-[#ff2d75]/50 hover:bg-[#ff2d75]/30 text-white'
+                        : 'bg-emerald-500/20 border-emerald-400/50 hover:bg-emerald-500/30 text-emerald-300 hover:text-white'
+                    }`}
+                  >
+                    <Plus className="w-4 h-4 text-emerald-400" />
+                    <span>Criar Rota (Partida ➔ Chegada)</span>
+                  </button>
 
                   <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
                     {routesList.map(r => (
-                      <button
+                      <div
                         key={r.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedRouteId(r.id);
-                          setIsRouteSelectorOpen(false);
-                        }}
-                        className={`w-full p-2.5 rounded-xl text-left border transition-all cursor-pointer flex items-center justify-between ${
+                        className={`group relative w-full p-2.5 rounded-xl border transition-all flex items-center justify-between ${
                           r.id === selectedRouteId
                             ? isRose
                               ? 'bg-[#ff2d75]/25 border-[#ff2d75] text-white'
@@ -189,8 +227,22 @@ export default function RouteMap({
                             : 'bg-white/5 border-transparent text-slate-300 hover:bg-white/10 hover:border-white/10'
                         }`}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-xs truncate">{r.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedRouteId(r.id);
+                            setIsRouteSelectorOpen(false);
+                          }}
+                          className="min-w-0 flex-1 text-left cursor-pointer"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-bold text-xs truncate">{r.name}</p>
+                            {r.isCustom && (
+                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-500/40">
+                                Criado
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-400 truncate">{r.location}</p>
                           <div className="flex items-center gap-2 mt-1 text-[9px] font-mono text-slate-400">
                             <span>{r.distanceKm} km</span>
@@ -199,11 +251,31 @@ export default function RouteMap({
                             <span>•</span>
                             <span className={r.difficulty.includes('Difícil') ? 'text-rose-400' : 'text-emerald-400'}>{r.difficulty}</span>
                           </div>
+                        </button>
+
+                        <div className="flex items-center gap-1">
+                          {r.isCustom && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const updated = deleteCustomRoute(r.id);
+                                setRoutesList([...updated, ...PRESET_ROUTES]);
+                                if (selectedRouteId === r.id) {
+                                  setSelectedRouteId(PRESET_ROUTES[0].id);
+                                }
+                              }}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 transition-all cursor-pointer opacity-70 group-hover:opacity-100"
+                              title="Eliminar este percurso personalizado"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {r.id === selectedRouteId && (
+                            <Check className={`w-4 h-4 flex-shrink-0 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
+                          )}
                         </div>
-                        {r.id === selectedRouteId && (
-                          <Check className={`w-4 h-4 flex-shrink-0 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
-                        )}
-                      </button>
+                      </div>
                     ))}
                   </div>
 
@@ -218,6 +290,21 @@ export default function RouteMap({
                 </div>
               )}
             </div>
+
+            {/* Quick Create Route Button */}
+            <button
+              type="button"
+              onClick={() => setIsRoutePlannerOpen(true)}
+              className={`px-3 py-2 rounded-2xl backdrop-blur-xl border text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-lg ${
+                isRose
+                  ? 'border-[#ff2d75]/50 bg-[#ff2d75]/20 hover:bg-[#ff2d75]/35 text-white'
+                  : 'border-emerald-400/50 bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 hover:text-white'
+              }`}
+              title="Criar novo percurso personalizado com ponto de partida e chegada"
+            >
+              <Plus className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Novo Percurso</span>
+            </button>
 
             {/* Quick Upload Button */}
             <button
@@ -425,6 +512,18 @@ export default function RouteMap({
           )}
         </div>
       </div>
+
+      {/* Interactive Route Planner Modal */}
+      <RoutePlannerModal
+        isOpen={isRoutePlannerOpen}
+        onClose={() => setIsRoutePlannerOpen(false)}
+        onRouteCreated={(newRoute) => {
+          setRoutesList(prev => [newRoute, ...prev.filter(r => r.id !== newRoute.id)]);
+          setSelectedRouteId(newRoute.id);
+        }}
+        isRose={isRose}
+        primaryColor={primaryColor}
+      />
     </div>
   );
 }
