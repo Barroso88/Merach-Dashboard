@@ -39,40 +39,8 @@ export default function StreetViewPanoramaView({
   const [autoHeading, setAutoHeading] = useState(true);
   const [currentPanoInfo, setCurrentPanoInfo] = useState(null);
   const [userInteracting, setUserInteracting] = useState(false);
-  const [invertColors, setInvertColors] = useState(true); // Reverses Google's developer mode negative effect
+  const [invertColors, setInvertColors] = useState(false); // Natural colors by default now that billing is enabled
   const [showBillingTip, setShowBillingTip] = useState(false);
-
-  // Clean Google's "For development purposes only" watermark & dark tint overlays
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const cleanDevOverlays = () => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const allElements = container.querySelectorAll('*');
-      allElements.forEach(el => {
-        if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
-          if (el.textContent && el.textContent.includes('For development purposes only')) {
-            el.style.display = 'none';
-            if (el.parentElement) {
-              el.parentElement.style.display = 'none';
-            }
-          }
-        }
-      });
-    };
-
-    const observer = new MutationObserver(cleanDevOverlays);
-    observer.observe(containerRef.current, { childList: true, subtree: true });
-
-    const interval = setInterval(cleanDevOverlays, 600);
-
-    return () => {
-      observer.disconnect();
-      clearInterval(interval);
-    };
-  }, []);
 
   // Calculate realistic camera pitch based on road gradient (climbing looks slightly up, descent looks down)
   const targetPitch = Math.max(-12, Math.min(12, gradient * 0.8));

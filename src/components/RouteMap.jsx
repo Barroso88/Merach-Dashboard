@@ -151,13 +151,25 @@ export default function RouteMap({
   // Invalidate Leaflet Map Size when switching viewMode or toggling PIP
   useEffect(() => {
     if (mapInstanceRef.current) {
-      const timer = setTimeout(() => {
-        mapInstanceRef.current?.invalidateSize();
-        if (riderPos && autoFollow) {
-          mapInstanceRef.current?.setView([riderPos.lat, riderPos.lng], zoomLevel, { animate: false });
+      const resize = () => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+          if (riderPos && autoFollow) {
+            mapInstanceRef.current.setView([riderPos.lat, riderPos.lng], zoomLevel, { animate: false });
+          }
         }
-      }, 200);
-      return () => clearTimeout(timer);
+      };
+
+      resize();
+      const t1 = setTimeout(resize, 50);
+      const t2 = setTimeout(resize, 180);
+      const t3 = setTimeout(resize, 450);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
     }
   }, [viewMode, showPipMap, riderPos, autoFollow, zoomLevel]);
 
@@ -379,17 +391,21 @@ export default function RouteMap({
           <div
             className={
               viewMode === 'map'
-                ? 'w-full h-full z-0 relative'
+                ? 'w-full h-full z-0 relative flex flex-col'
                 : viewMode === 'split'
-                ? 'w-full md:w-1/2 h-1/2 md:h-full z-0 relative border-t md:border-t-0 md:border-l border-white/20'
+                ? 'w-full md:w-1/2 h-1/2 md:h-full z-0 relative flex flex-col border-t md:border-t-0 md:border-l border-white/20'
                 : showPipMap
                 ? 'absolute bottom-32 right-4 w-64 h-48 rounded-2xl border-2 border-sky-400/40 shadow-2xl z-20 overflow-hidden bg-slate-950/95 flex flex-col'
                 : 'hidden'
             }
+            style={{
+              height: viewMode === 'map' ? '100%' : undefined,
+              width: viewMode === 'map' ? '100%' : undefined
+            }}
           >
             {/* Header for PIP floating mini-map */}
             {viewMode === 'streetview' && showPipMap && (
-              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-950/90 border-b border-white/15 text-[10px] font-bold text-white z-10">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-950/90 border-b border-white/15 text-[10px] font-bold text-white z-10 flex-shrink-0">
                 <span className="flex items-center gap-1.5 text-sky-400">
                   <MapIcon className="w-3 h-3" /> Traçado GPS
                 </span>
@@ -415,7 +431,8 @@ export default function RouteMap({
             )}
             <div
               ref={mapContainerRef}
-              className="w-full flex-1 min-h-0"
+              className="w-full h-full flex-1 min-h-[250px] relative"
+              style={{ height: '100%', width: '100%', minHeight: '100%' }}
             />
           </div>
         </div>
