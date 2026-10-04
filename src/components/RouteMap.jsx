@@ -47,7 +47,7 @@ export default function RouteMap({
       googleMapsApiKey ||
       getStoredSettings()?.googleMapsApiKey ||
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-      'AIzaSyDYRazINJY0D57G8x5eKrmIY1MyaOypK1o'
+      'AIzaSyAvscR3r1g4VGLbRpdKoC7DtB9Ezla_oac'
     ).trim();
   }, [googleMapsApiKey]);
 

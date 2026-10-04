@@ -163,7 +163,7 @@ export const DEFAULT_SETTINGS = {
   haToken: '',
   cfClientId: '',
   cfClientSecret: '',
-  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDYRazINJY0D57G8x5eKrmIY1MyaOypK1o',
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAvscR3r1g4VGLbRpdKoC7DtB9Ezla_oac',
   haEntities: {
     cadence: 'sensor.merach_bike_cadence',
     speed: 'sensor.merach_bike_speed',
@@ -183,9 +183,14 @@ export function getStoredSettings() {
       return DEFAULT_SETTINGS;
     }
     const parsed = JSON.parse(data);
+    const key = (parsed?.googleMapsApiKey === 'AIzaSyDYRazINJY0D57G8x5eKrmIY1MyaOypK1o' || !parsed?.googleMapsApiKey)
+      ? DEFAULT_SETTINGS.googleMapsApiKey
+      : parsed.googleMapsApiKey;
+
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      googleMapsApiKey: key,
       haEntities: {
         ...DEFAULT_SETTINGS.haEntities,
         ...(parsed?.haEntities || {})

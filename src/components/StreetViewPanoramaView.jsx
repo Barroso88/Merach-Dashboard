@@ -37,8 +37,7 @@ export default function StreetViewPanoramaView({
   const [error, setError] = useState(null);
   const [authError, setAuthError] = useState(hasGoogleMapsAuthError());
   const [autoHeading, setAutoHeading] = useState(true);
-  const [currentPanoInfo, setCurrentPanoInfo] = useState(null);
-  const [invertColors, setInvertColors] = useState(true); // Invert negative dev shader by default
+  const [invertColors, setInvertColors] = useState(false); // Natural colors for billed account
   const [showBillingTip, setShowBillingTip] = useState(false);
 
   // Calculate realistic camera pitch based on road gradient (climbing looks slightly up, descent looks down)
