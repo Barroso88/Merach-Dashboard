@@ -3,7 +3,9 @@ import SportNeedleGauge from './SportNeedleGauge';
 import WorkoutControls from './WorkoutControls';
 import RouteMap from './RouteMap';
 import RouteErrorBoundary from './RouteErrorBoundary';
-import { Gauge, Map } from 'lucide-react';
+import { Gauge, Map, Navigation, ChevronRight } from 'lucide-react';
+import { PRESET_ROUTES } from '../services/routesData';
+import { getStoredCustomRoutes } from '../services/routePlannerService';
 
 export default function LiveDashboard({
   telemetry,
@@ -147,6 +149,42 @@ export default function LiveDashboard({
         >
           <Map className="w-3.5 h-3.5" />
           <span>Percurso Real (Ecrã Completo)</span>
+        </button>
+      </div>
+
+      {/* Active Route Quick-Access Banner */}
+      <div className={`w-full max-w-3xl px-4 py-2.5 rounded-2xl border backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 transition-all ${
+        isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30 shadow-lg' : 'bg-slate-900/80 border-slate-800 shadow-lg'
+      }`}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+            isRose ? 'bg-[#ff2d75]/20 text-[#ff85b3] border border-[#ff2d75]/30' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+          }`}>
+            <Navigation className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 text-left">
+            <span className="block text-xs font-black text-white truncate max-w-[220px] sm:max-w-md">
+              {PRESET_ROUTES[0]?.name || 'Marginal Estoril ➔ Cascais ➔ Guincho'}
+            </span>
+            <span className="block text-[10px] font-mono text-slate-400">
+              {PRESET_ROUTES[0]?.distanceKm || 12.99} km • +{PRESET_ROUTES[0]?.elevationGain || 95}m D+ • {PRESET_ROUTES[0]?.difficulty || 'Panorâmica'}
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setDashboardMode('route')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+            isRose
+              ? 'bg-[#ff2d75]/20 hover:bg-[#ff2d75]/30 text-[#ff85b3] hover:text-white border border-[#ff2d75]/40'
+              : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-white border border-emerald-500/30'
+          }`}
+          title="Ver percurso no mapa 3D ou escolher/criar outro percurso"
+        >
+          <Map className="w-3.5 h-3.5" />
+          <span>Ver / Alterar Percurso</span>
+          <ChevronRight className="w-3 h-3" />
         </button>
       </div>
 

@@ -6,6 +6,7 @@ import AnalyticsView from './components/AnalyticsView';
 import WorkoutSummaryModal from './components/WorkoutSummaryModal';
 import WorkoutDetailModal from './components/WorkoutDetailModal';
 import ConnectionSettingsModal from './components/ConnectionSettingsModal';
+import ModalErrorBoundary from './components/ModalErrorBoundary';
 
 import { MerachSimulator } from './services/telemetrySimulator';
 import { HomeAssistantService } from './services/homeAssistantService';
@@ -538,16 +539,18 @@ export default function App() {
       />
 
       {/* Modal: Settings and Home Assistant Integration */}
-      <ConnectionSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        themeConfig={activeTheme}
-        onSave={handleSaveSettings}
-        onSaveSettings={handleSaveSettings}
-        haService={haServiceRef.current}
-        onResetSampleData={handleResetSampleData}
-      />
+      <ModalErrorBoundary onClose={() => setIsSettingsOpen(false)}>
+        <ConnectionSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          themeConfig={activeTheme}
+          onSave={handleSaveSettings}
+          onSaveSettings={handleSaveSettings}
+          haService={haServiceRef.current}
+          onResetSampleData={handleResetSampleData}
+        />
+      </ModalErrorBoundary>
     </div>
   );
 }

@@ -170,7 +170,7 @@ async function connectPostgres(configOverride = null) {
 
   if (!dbUrl && !host) {
     isPostgresReady = false;
-    lastPostgresError = 'Nenhum host ou URL de PostgreSQL configurado';
+    lastPostgresError = 'Falta configurar o Host ou IP do PostgreSQL (ex: 192.168.1.xxx ou nome do container)';
     return { success: false, error: lastPostgresError };
   }
 
@@ -381,9 +381,28 @@ const server = http.createServer(async (req, res) => {
       if (process.env.CF_CLIENT_SECRET) envSettings.cfClientSecret = process.env.CF_CLIENT_SECRET;
       if (process.env.GOOGLE_MAPS_API_KEY) envSettings.googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
 
+      const envPg = {};
+      if (process.env.PG_HOST || process.env.PGHOST) envPg.host = process.env.PG_HOST || process.env.PGHOST;
+      if (process.env.PG_PORT || process.env.PGPORT) envPg.port = parseInt(process.env.PG_PORT || process.env.PGPORT, 10);
+      if (process.env.PG_USER || process.env.PGUSER) envPg.user = process.env.PG_USER || process.env.PGUSER;
+      if (process.env.PG_PASSWORD || process.env.PGPASSWORD) envPg.password = process.env.PG_PASSWORD || process.env.PGPASSWORD;
+      if (process.env.PG_DATABASE || process.env.PGDATABASE) envPg.database = process.env.PG_DATABASE || process.env.PGDATABASE;
+      if (process.env.DATABASE_URL) envPg.databaseUrl = process.env.DATABASE_URL;
+
+      const savedPg = saved?.postgresConfig || {};
+      const mergedPgConfig = {
+        host: envPg.host || savedPg.host || '',
+        port: envPg.port || savedPg.port || 5432,
+        user: envPg.user || savedPg.user || 'postgres',
+        password: envPg.password !== undefined ? envPg.password : (savedPg.password || ''),
+        database: envPg.database || savedPg.database || 'merach',
+        ...(envPg.databaseUrl ? { databaseUrl: envPg.databaseUrl } : {})
+      };
+
       const merged = { 
         ...saved, 
         ...envSettings, 
+        postgresConfig: mergedPgConfig,
         postgresConnected: isPostgresReady,
         postgresError: lastPostgresError
       };
@@ -541,7 +560,13 @@ const server = http.createServer(async (req, res) => {
       if (isPostgresReady && dbPool) {
         try {
           const dbRes = await dbPool.query('SELECT data FROM merach_routes ORDER BY created_at DESC');
-          routes = dbRes.rows.map(r => r.data);
+          routes = dbRes.rows.map(r => {
+            try {
+              return typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+            } catch {
+              return r.data;
+            }
+          }).filter(r => r && r.id);
         } catch {
           routes = readJsonFile(ROUTES_FILE, []);
         }

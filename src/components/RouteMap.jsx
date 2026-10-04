@@ -236,38 +236,49 @@ export default function RouteMap({
         </div>
 
         {/* TOP HUD BAR: Route Title, Selector & GPX Upload */}
-        <div className="absolute top-4 left-4 right-16 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-          <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+          <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
             {/* Route Selector Dropdown Toggle */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsRouteSelectorOpen(!isRouteSelectorOpen)}
-                className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl backdrop-blur-xl border font-bold text-xs shadow-lg transition-all cursor-pointer ${
+                className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl backdrop-blur-xl border font-bold text-xs shadow-lg transition-all cursor-pointer ${
                   isRose
-                    ? 'bg-[#290534]/90 border-[#ff2d75]/50 text-white hover:border-[#ff2d75]'
-                    : 'bg-slate-900/90 border-slate-700/80 text-white hover:border-sky-500'
+                    ? 'bg-[#290534]/95 border-[#ff2d75]/50 text-white hover:border-[#ff2d75]'
+                    : 'bg-slate-900/95 border-slate-700/80 text-white hover:border-sky-500'
                 }`}
+                title="Clique para escolher entre os percursos oficiais e personalizados"
               >
-                <Navigation className={`w-3.5 h-3.5 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
+                <Navigation className={`w-3.5 h-3.5 shrink-0 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
                 <div className="text-left">
-                  <span className="block text-[11px] font-black truncate max-w-[160px] sm:max-w-[220px]">
-                    {currentRoute.name}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="block text-[11px] font-black truncate max-w-[150px] sm:max-w-[220px]">
+                      {currentRoute?.name || 'Selecionar Percurso'}
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
+                      isRose ? 'bg-[#ff2d75]/20 text-pink-300' : 'bg-sky-500/20 text-sky-300'
+                    }`}>
+                      Alterar ▾
+                    </span>
+                  </div>
                   <span className="block text-[9px] font-mono text-slate-400">
-                    {currentRoute.distanceKm} km • {currentRoute.elevationGain}m D+
+                    {currentRoute?.distanceKm || 0} km • {currentRoute?.elevationGain || 0}m D+
                   </span>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </button>
 
               {/* Route Picker Modal / Dropdown */}
               {isRouteSelectorOpen && (
-                <div className={`absolute top-full left-0 mt-2 w-80 rounded-2xl p-2.5 backdrop-blur-2xl border shadow-2xl z-50 animate-fadeIn ${
-                  isRose ? 'bg-[#1e0326]/95 border-[#ff2d75]/50' : 'bg-slate-950/95 border-slate-800'
+                <div className={`absolute top-full left-0 mt-2 w-80 sm:w-96 rounded-2xl p-3 backdrop-blur-2xl border shadow-2xl z-50 animate-fadeIn ${
+                  isRose ? 'bg-[#1e0326]/98 border-[#ff2d75]/50' : 'bg-slate-950/98 border-slate-800'
                 }`}>
-                  <div className="flex items-center justify-between px-2 py-1 mb-2 border-b border-white/10">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Percursos Reais</span>
+                  <div className="flex items-center justify-between px-1 py-1 mb-2.5 border-b border-white/10">
+                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Navigation className="w-3 h-3 text-sky-400" />
+                      Percursos Disponíveis ({routesList.length})
+                    </span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -275,19 +286,19 @@ export default function RouteMap({
                           setIsRouteSelectorOpen(false);
                           setIsRoutePlannerOpen(true);
                         }}
-                        className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-white cursor-pointer"
+                        className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 hover:text-white cursor-pointer"
                         title="Criar novo percurso com partida e chegada"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3.5 h-3.5" />
                         <span>Novo</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-1 text-[10px] font-bold text-sky-400 hover:text-white cursor-pointer"
+                        className="flex items-center gap-1 text-[11px] font-bold text-sky-400 hover:text-white cursor-pointer"
                         title="Carregar ficheiro .GPX"
                       >
-                        <Upload className="w-3 h-3" />
+                        <Upload className="w-3.5 h-3.5" />
                         <span>GPX</span>
                       </button>
                     </div>
@@ -300,25 +311,25 @@ export default function RouteMap({
                       setIsRouteSelectorOpen(false);
                       setIsRoutePlannerOpen(true);
                     }}
-                    className={`w-full mb-2 p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-black transition-all cursor-pointer shadow-md ${
+                    className={`w-full mb-2.5 p-2.5 rounded-xl border flex items-center justify-center gap-2 text-xs font-black transition-all cursor-pointer shadow-md ${
                       isRose
-                        ? 'bg-[#ff2d75]/20 border-[#ff2d75]/50 hover:bg-[#ff2d75]/30 text-white'
-                        : 'bg-emerald-500/20 border-emerald-400/50 hover:bg-emerald-500/30 text-emerald-300 hover:text-white'
+                        ? 'bg-[#ff2d75]/25 border-[#ff2d75]/60 hover:bg-[#ff2d75]/35 text-white'
+                        : 'bg-emerald-500/25 border-emerald-400/60 hover:bg-emerald-500/35 text-emerald-300 hover:text-white'
                     }`}
                   >
                     <Plus className="w-4 h-4 text-emerald-400" />
-                    <span>Criar Rota (Partida ➔ Chegada)</span>
+                    <span>Criar Novo Percurso (Partida ➔ Chegada)</span>
                   </button>
 
-                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                     {routesList.map(r => (
                       <div
                         key={r.id}
                         className={`group relative w-full p-2.5 rounded-xl border transition-all flex items-center justify-between ${
                           r.id === selectedRouteId
                             ? isRose
-                              ? 'bg-[#ff2d75]/25 border-[#ff2d75] text-white'
-                              : 'bg-sky-500/20 border-sky-400 text-white'
+                              ? 'bg-[#ff2d75]/25 border-[#ff2d75] text-white shadow-sm'
+                              : 'bg-sky-500/20 border-sky-400 text-white shadow-sm'
                             : 'bg-white/5 border-transparent text-slate-300 hover:bg-white/10 hover:border-white/10'
                         }`}
                       >
@@ -333,22 +344,22 @@ export default function RouteMap({
                           <div className="flex items-center gap-1.5">
                             <p className="font-bold text-xs truncate">{r.name}</p>
                             {r.isCustom && (
-                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-500/40">
-                                Criado
+                              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 shrink-0">
+                                Personalizado
                               </span>
                             )}
                           </div>
                           <p className="text-[10px] text-slate-400 truncate">{r.location}</p>
                           <div className="flex items-center gap-2 mt-1 text-[9px] font-mono text-slate-400">
-                            <span>{r.distanceKm} km</span>
+                            <span className="text-white font-bold">{r.distanceKm} km</span>
                             <span>•</span>
                             <span>+{r.elevationGain}m</span>
                             <span>•</span>
-                            <span className={r.difficulty.includes('Difícil') ? 'text-rose-400' : 'text-emerald-400'}>{r.difficulty}</span>
+                            <span className={r.difficulty?.includes('Difícil') ? 'text-rose-400' : 'text-emerald-400'}>{r.difficulty}</span>
                           </div>
                         </button>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 pl-2">
                           {r.isCustom && (
                             <button
                               type="button"
@@ -392,24 +403,24 @@ export default function RouteMap({
               onClick={() => setIsRoutePlannerOpen(true)}
               className={`px-3 py-2 rounded-2xl backdrop-blur-xl border text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-lg ${
                 isRose
-                  ? 'border-[#ff2d75]/50 bg-[#ff2d75]/20 hover:bg-[#ff2d75]/35 text-white'
-                  : 'border-emerald-400/50 bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 hover:text-white'
+                  ? 'border-[#ff2d75]/50 bg-[#ff2d75]/25 hover:bg-[#ff2d75]/40 text-white'
+                  : 'border-emerald-400/50 bg-emerald-500/25 hover:bg-emerald-500/40 text-emerald-300 hover:text-white'
               }`}
               title="Criar novo percurso personalizado com ponto de partida e chegada"
             >
-              <Plus className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Novo Percurso</span>
+              <Plus className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Criar Rota</span>
             </button>
 
             {/* Quick Upload Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-2 rounded-2xl backdrop-blur-xl border border-white/15 bg-black/60 hover:bg-black/80 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg"
+              className="px-3 py-2 rounded-2xl backdrop-blur-xl border border-white/15 bg-black/75 hover:bg-black/90 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg"
               title="Carregar percurso personalizado GPX do Strava ou Garmin"
             >
-              <Upload className="w-3.5 h-3.5 text-amber-300" />
-              <span className="hidden sm:inline">GPX</span>
+              <Upload className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <span>GPX</span>
             </button>
 
             {/* View Mode Switcher: Visão Frontal 3D (Carro) vs Visão Aérea */}
@@ -427,7 +438,7 @@ export default function RouteMap({
                 title="Visão Frontal 3D da Estrada (Cockpit / Como no Carro)"
               >
                 <Car className="w-3.5 h-3.5" />
-                <span>Visão Frontal (Carro)</span>
+                <span>Visão Frontal</span>
               </button>
 
               <button

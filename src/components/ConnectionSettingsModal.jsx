@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
+  Camera,
   Database
 } from 'lucide-react';
 import { DEFAULT_SETTINGS } from '../services/storageService';
@@ -916,6 +917,13 @@ export default function ConnectionSettingsModal({
             <p className="text-[11px] text-slate-400 leading-relaxed">
               Guarda os treinos, estatísticas e percursos personalizados na base de dados PostgreSQL no Unraid com persistência total. Se os campos estiverem vazios, é utilizado o armazenamento em ficheiros locais (<code className="text-slate-300">/app/data</code>).
             </p>
+
+            {settings?.postgresError && !settings?.postgresConnected && !postgresTestStatus?.success && (
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                <span><strong>Estado atual:</strong> {settings.postgresError}</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
