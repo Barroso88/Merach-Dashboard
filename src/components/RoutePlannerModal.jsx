@@ -147,7 +147,7 @@ export default function RoutePlannerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className={`relative w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border shadow-2xl p-6 transition-all ${
         isRose
           ? 'bg-[#180320]/95 border-[#ff2d75]/40 shadow-[0_0_50px_rgba(255,45,117,0.25)]'

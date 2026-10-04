@@ -36,7 +36,7 @@ export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div className={`relative w-full max-w-3xl rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col backdrop-blur-2xl transition-all duration-500 border ${
         themeConfig?.modalPanelClass || 'bg-slate-950/90 border-slate-700/80 shadow-2xl'
       }`}>

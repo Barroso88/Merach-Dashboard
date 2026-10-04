@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   Navigation,
   Mountain,
@@ -11,7 +11,16 @@ import {
   Layers,
   Car,
   Plus,
-  Trash2
+  Trash2,
+  Play,
+  Pause,
+  Square,
+  RotateCcw,
+  Timer,
+  Flame,
+  Gauge,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import {
   PRESET_ROUTES,
@@ -27,8 +36,17 @@ export default function RouteMap({
   currentDistanceKm = 0,
   speedKmH = 0,
   cadenceRpm = 0,
+  caloriesKcal = 0,
+  elapsedSeconds = 0,
+  targetSeconds = 0,
   themeConfig,
-  workoutStatus,
+  workoutStatus = 'idle',
+  onStart,
+  onPause,
+  onResume,
+  onStop,
+  onReset,
+  onExitRouteMode,
   googleMapsApiKey
 }) {
   const isRose = themeConfig?.id === 'rose';
@@ -120,10 +138,72 @@ export default function RouteMap({
   const gradientBadge = riderPos ? getGradientBadge(riderPos.gradient) : null;
   const GradientIcon = gradientBadge?.icon || Mountain;
 
+  // Browser Fullscreen API handler
+  const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(false);
+
+  const toggleBrowserFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsBrowserFullscreen(true);
+      }).catch((err) => {
+        console.warn('Fullscreen request failed:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsBrowserFullscreen(false);
+      }).catch((err) => {
+        console.warn('Exit fullscreen failed:', err);
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsBrowserFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const formatTime = (totalSecs) => {
+    const hours = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    if (hours > 0) {
+      return `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${pad(mins)}:${pad(secs)}`;
+  };
+
+  const isCountdownMode = targetSeconds > 0;
+  const remainingSeconds = isCountdownMode ? Math.max(0, targetSeconds - elapsedSeconds) : 0;
+
+  const statusConfig = {
+    idle: {
+      label: 'Sessão Parada',
+      badgeColor: isRose ? 'bg-[#3b0748] text-pink-200 border-[#ff2d75]/35' : 'bg-slate-800 text-slate-400 border-slate-700',
+      dotColor: isRose ? 'bg-[#ff2d75]' : 'bg-slate-500'
+    },
+    running: {
+      label: isCountdownMode ? 'Contagem Ativa' : 'A Treinar',
+      badgeColor: isRose 
+        ? 'bg-[#ff2d75]/25 text-white border-[#ff2d75]/60 shadow-[0_0_12px_rgba(255,45,117,0.4)]' 
+        : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      dotColor: isRose ? 'bg-[#ff2d75] animate-ping' : 'bg-emerald-400 animate-ping'
+    },
+    paused: {
+      label: 'Treino Pausado',
+      badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+      dotColor: 'bg-amber-400'
+    }
+  };
+  const currentStatus = statusConfig[workoutStatus] || statusConfig.idle;
+
   return (
-    <div className="w-full flex flex-col gap-4 animate-fadeIn">
-      {/* MAP & STREET VIEW VIEWPORT CONTAINER */}
-      <div className={`relative w-full h-[540px] md:h-[620px] rounded-3xl overflow-hidden border shadow-2xl transition-all ${
+    <div className="w-full h-full flex flex-col relative animate-fadeIn">
+      {/* MAP & STREET VIEW VIEWPORT CONTAINER (Full Screen Immersion) */}
+      <div className={`relative w-full h-full rounded-2xl md:rounded-3xl overflow-hidden border shadow-2xl transition-all ${
         isRose ? 'border-[#ff2d75]/40 shadow-[0_0_35px_-5px_rgba(255,45,117,0.3)]' : 'border-sky-500/30 shadow-[0_0_35px_-5px_rgba(56,189,248,0.25)]'
       }`}>
         {/* VIEW AREA: 3D Car Navigation / Aerial Satellite */}
@@ -353,31 +433,58 @@ export default function RouteMap({
             </div>
           </div>
 
-          {/* Quick HUD Pill: Gradient / Slope & Elevation & Bearing */}
-          {riderPos && gradientBadge && (
-            <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Top Right Quick Actions: Gradient Badge, Return to Gauges & Fullscreen */}
+          <div className="flex items-center gap-2 pointer-events-auto">
+            {riderPos && gradientBadge && (
               <div className={`px-3 py-1.5 rounded-2xl backdrop-blur-xl border font-mono font-bold text-xs flex items-center gap-2 shadow-lg ${gradientBadge.color}`}>
                 <GradientIcon className="w-3.5 h-3.5" />
-                <span>{gradientBadge.label}</span>
+                <span className="hidden sm:inline">{gradientBadge.label}</span>
                 <span className="text-[10px] text-slate-300 border-l border-white/20 pl-2">
-                  {riderPos.ele} m Alt
+                  {riderPos.ele}m
                 </span>
                 <span className="text-[10px] text-sky-300 border-l border-white/20 pl-2 flex items-center gap-1 font-bold">
                   <span>🧭</span>
                   <span>{Math.round(riderPos.bearing || 0)}°</span>
                 </span>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Return to Gauges View */}
+            {onExitRouteMode && (
+              <button
+                type="button"
+                onClick={onExitRouteMode}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl backdrop-blur-xl border font-bold text-xs shadow-lg transition-all cursor-pointer ${
+                  isRose
+                    ? 'bg-[#290534]/90 border-[#ff2d75]/50 text-pink-200 hover:text-white'
+                    : 'bg-slate-900/90 border-slate-700/80 text-sky-300 hover:text-white hover:border-sky-400'
+                }`}
+                title="Voltar aos Manómetros & Telemetria"
+              >
+                <Gauge className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Manómetros</span>
+              </button>
+            )}
+
+            {/* Browser Fullscreen Toggle */}
+            <button
+              type="button"
+              onClick={toggleBrowserFullscreen}
+              className="p-1.5 rounded-2xl backdrop-blur-xl border border-white/15 bg-black/75 hover:bg-black/90 text-slate-300 hover:text-white transition-all shadow-lg cursor-pointer"
+              title={isBrowserFullscreen ? "Sair de Ecrã Completo" : "Ecrã Completo"}
+            >
+              {isBrowserFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
 
-        {/* BOTTOM HUD PANEL: Live Progress & Rider Stats */}
-        <div className="absolute bottom-4 left-4 right-4 z-20 pointer-events-none">
-          <div className={`p-4 rounded-3xl backdrop-blur-2xl border shadow-2xl pointer-events-auto ${
-            isRose ? 'bg-[#1b0323]/90 border-[#ff2d75]/40' : 'bg-slate-950/90 border-slate-800'
+        {/* BOTTOM HUD PANEL: Live Progress, Telemetry & Workout Controls */}
+        <div className="absolute bottom-3 left-3 right-3 md:bottom-4 md:left-6 md:right-6 z-30 pointer-events-none">
+          <div className={`p-3 md:p-4 rounded-2xl md:rounded-3xl backdrop-blur-2xl border shadow-2xl pointer-events-auto transition-all ${
+            isRose ? 'bg-[#1b0323]/92 border-[#ff2d75]/40 shadow-[0_15px_50px_rgba(255,45,117,0.35)]' : 'bg-slate-950/92 border-slate-800/90 shadow-[0_15px_50px_rgba(0,0,0,0.85)]'
           }`}>
             {/* Real-Time Progress Bar on Route */}
-            <div className="space-y-1.5 mb-3">
+            <div className="space-y-1 mb-2.5">
               <div className="flex items-center justify-between text-xs font-mono font-bold">
                 <span className="flex items-center gap-1.5 text-white">
                   <Flag className={`w-3.5 h-3.5 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
@@ -389,8 +496,8 @@ export default function RouteMap({
                 </span>
               </div>
 
-              {/* Progress Track with animated bicycle icon indicator */}
-              <div className="relative w-full h-3 bg-black/60 rounded-full overflow-hidden border border-white/10">
+              {/* Progress Track */}
+              <div className="relative w-full h-2.5 bg-black/60 rounded-full overflow-hidden border border-white/10">
                 <div
                   className="h-full rounded-full transition-all duration-500 ease-out"
                   style={{
@@ -403,24 +510,143 @@ export default function RouteMap({
               </div>
             </div>
 
-            {/* Quick Live Telemetry Strip on Map */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center font-mono">
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-sans">Velocidade</span>
-                <span className="text-base font-black text-white">{speedKmH} <span className="text-[10px] text-slate-400">km/h</span></span>
+            {/* Unified Bottom Strip: Live Telemetry (4 tiles) + Workout Controls (Timer & Buttons) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center pt-2 border-t border-white/10">
+              
+              {/* Telemetry Strip (4 Metrics): Velocidade, Cadência, Distância, Calorias */}
+              <div className="lg:col-span-7 grid grid-cols-4 gap-2 text-center font-mono">
+                {/* Velocidade */}
+                <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                  <span className="block text-[8px] md:text-[9px] uppercase tracking-wider text-slate-400 font-sans">Velocidade</span>
+                  <span className="text-sm md:text-base font-black text-white">{speedKmH} <span className="text-[9px] md:text-[10px] text-slate-400">km/h</span></span>
+                </div>
+
+                {/* Cadência */}
+                <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                  <span className="block text-[8px] md:text-[9px] uppercase tracking-wider text-slate-400 font-sans">Cadência</span>
+                  <span className="text-sm md:text-base font-black text-white">{cadenceRpm} <span className="text-[9px] md:text-[10px] text-slate-400">RPM</span></span>
+                </div>
+
+                {/* Distância */}
+                <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                  <span className="block text-[8px] md:text-[9px] uppercase tracking-wider text-slate-400 font-sans">Distância</span>
+                  <span className="text-sm md:text-base font-black text-white">{Number(currentDistanceKm || 0).toFixed(2)} <span className="text-[9px] md:text-[10px] text-slate-400">km</span></span>
+                </div>
+
+                {/* Calorias (Substitui Volta / Lap #1) */}
+                <div className="p-2 rounded-xl bg-white/5 border border-amber-500/30">
+                  <span className="block text-[8px] md:text-[9px] uppercase tracking-wider text-amber-300 font-sans flex items-center justify-center gap-1">
+                    <Flame className="w-2.5 h-2.5 text-amber-400" />
+                    Calorias
+                  </span>
+                  <span className="text-sm md:text-base font-black text-amber-400">{Math.round(caloriesKcal || 0)} <span className="text-[9px] md:text-[10px] text-amber-300/80">kcal</span></span>
+                </div>
               </div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-sans">Cadência</span>
-                <span className="text-base font-black text-white">{cadenceRpm} <span className="text-[10px] text-slate-400">RPM</span></span>
+
+              {/* Workout Controls Strip: Tempo Decorrido & Botões de Ação */}
+              <div className="lg:col-span-5 flex items-center justify-between lg:justify-end gap-3 pl-0 lg:pl-3 border-t lg:border-t-0 lg:border-l border-white/10 pt-2 lg:pt-0">
+                {/* Timer Display */}
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center border shadow-sm ${
+                    isRose ? 'bg-[#ff2d75]/20 border-[#ff2d75]/40 text-[#ff85b3]' : 'bg-sky-500/20 border-sky-500/30 text-sky-400'
+                  }`}>
+                    <Timer className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`px-2 py-0.2 rounded-full text-[9px] font-bold border flex items-center gap-1 ${currentStatus.badgeColor}`}>
+                        <span className={`w-1 h-1 rounded-full ${currentStatus.dotColor}`} />
+                        {currentStatus.label}
+                      </div>
+                    </div>
+                    <div className="text-xl md:text-2xl font-black font-mono tracking-tight text-white leading-tight">
+                      {isCountdownMode ? formatTime(remainingSeconds) : formatTime(elapsedSeconds)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interactive Action Buttons */}
+                <div className="flex items-center gap-2">
+                  {workoutStatus === 'idle' && (
+                    <button
+                      type="button"
+                      onClick={onStart}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r ${
+                        isRose ? 'from-[#9400D3] to-[#ff2d75]' : 'from-emerald-500 to-teal-500'
+                      } text-white font-black text-xs md:text-sm tracking-wide shadow-lg active:scale-95 transition-all cursor-pointer`}
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>INICIAR</span>
+                    </button>
+                  )}
+
+                  {workoutStatus === 'running' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onPause}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs tracking-wide active:scale-95 transition-all shadow-md cursor-pointer"
+                      >
+                        <Pause className="w-4 h-4 fill-current" />
+                        <span>PAUSAR</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={onStop}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-xs tracking-wide active:scale-95 transition-all shadow-md cursor-pointer ${
+                          isRose
+                            ? 'bg-rose-500/25 hover:bg-rose-500/35 border-[#ff2d75]/50 text-white'
+                            : 'bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/40 text-rose-300'
+                        }`}
+                      >
+                        <Square className="w-3.5 h-3.5 fill-current" />
+                        <span>FINALIZAR</span>
+                      </button>
+                    </>
+                  )}
+
+                  {workoutStatus === 'paused' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onResume}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r ${
+                          isRose ? 'from-[#9400D3] to-[#ff2d75]' : 'from-emerald-500 to-teal-500'
+                        } text-white font-black text-xs md:text-sm tracking-wide active:scale-95 transition-all shadow-lg cursor-pointer`}
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                        <span>RETOMAR</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={onStop}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-xs tracking-wide active:scale-95 transition-all shadow-md cursor-pointer ${
+                          isRose
+                            ? 'bg-rose-500/25 hover:bg-rose-500/35 border-[#ff2d75]/50 text-white'
+                            : 'bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/40 text-rose-300'
+                        }`}
+                      >
+                        <Square className="w-3.5 h-3.5 fill-current" />
+                        <span>FINALIZAR</span>
+                      </button>
+                    </>
+                  )}
+
+                  {workoutStatus === 'idle' && elapsedSeconds > 0 && (
+                    <button
+                      type="button"
+                      onClick={onReset}
+                      className="p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer"
+                      title="Zerar cronómetro"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-sans">Distância Treino</span>
-                <span className="text-base font-black text-white">{Number(currentDistanceKm || 0).toFixed(2)} <span className="text-[10px] text-slate-400">km</span></span>
-              </div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-sans">Volta / Lap</span>
-                <span className="text-base font-black text-white">#{riderPos?.lapNumber || 1}</span>
-              </div>
+
             </div>
           </div>
         </div>

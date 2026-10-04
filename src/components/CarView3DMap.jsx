@@ -254,8 +254,21 @@ export default function CarView3DMap({
 
     initMap();
 
+    let resizeObserver = null;
+    if (window.ResizeObserver && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapRef.current) {
+          mapRef.current.resize();
+        }
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
     return () => {
       isCancelled = true;
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;

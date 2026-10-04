@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import SportNeedleGauge from './SportNeedleGauge';
-import LiveChart from './LiveChart';
 import WorkoutControls from './WorkoutControls';
 import RouteMap from './RouteMap';
 import RouteErrorBoundary from './RouteErrorBoundary';
@@ -23,6 +22,26 @@ export default function LiveDashboard({
   onReset
 }) {
   const [dashboardMode, setDashboardMode] = useState('gauges'); // 'gauges' | 'route'
+
+  // Dynamic responsive gauge sizing (compact on tablets to avoid scrolling!)
+  const [gaugeSize, setGaugeSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth < 640) return 205;
+      if (window.innerWidth < 1024) return 230;
+      return 265;
+    }
+    return 265;
+  });
+
+  React.useEffect(() => {
+    const updateSize = () => {
+      if (window.innerWidth < 640) setGaugeSize(205);
+      else if (window.innerWidth < 1024) setGaugeSize(230);
+      else setGaugeSize(265);
+    };
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   // Use themeConfig or fallback to cyan
   const speedAccent = themeConfig?.speedAccent || '#38bdf8';
@@ -49,9 +68,36 @@ export default function LiveDashboard({
 
   const isRose = themeConfig?.id === 'rose';
 
+  // In Route mode: Fullscreen immersion with all controls and telemetry overlaid on map!
+  if (dashboardMode === 'route') {
+    return (
+      <div className="fixed inset-0 z-40 w-screen h-screen bg-slate-950 overflow-hidden flex flex-col animate-fadeIn">
+        <RouteErrorBoundary>
+          <RouteMap
+            currentDistanceKm={sessionStats.distanceKm}
+            speedKmH={telemetry.speed}
+            cadenceRpm={telemetry.cadence}
+            caloriesKcal={sessionStats.caloriesKcal}
+            elapsedSeconds={elapsedSeconds}
+            targetSeconds={targetSeconds}
+            themeConfig={themeConfig}
+            workoutStatus={workoutStatus}
+            onStart={onStart}
+            onPause={onPause}
+            onResume={onResume}
+            onStop={onStop}
+            onReset={onReset}
+            onExitRouteMode={() => setDashboardMode('gauges')}
+            googleMapsApiKey={settings?.googleMapsApiKey}
+          />
+        </RouteErrorBoundary>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 animate-fadeIn pb-16 md:pb-8 max-w-6xl mx-auto flex flex-col items-center">
-      {/* Centered Workout Timer & Controls */}
+    <div className="space-y-3.5 md:space-y-4 animate-fadeIn pb-6 max-w-6xl w-full mx-auto flex flex-col items-center">
+      {/* Centered Workout Timer & Controls (Visible only in Gauges mode) */}
       <div className="w-full flex justify-center">
         <div className="w-full max-w-3xl">
           <WorkoutControls
@@ -70,13 +116,13 @@ export default function LiveDashboard({
       </div>
 
       {/* Cockpit Mode Switcher: Manómetros vs Percurso GPS */}
-      <div className={`flex items-center gap-1.5 p-1.5 rounded-2xl border backdrop-blur-xl transition-all ${
+      <div className={`flex items-center gap-1.5 p-1 rounded-2xl border backdrop-blur-xl transition-all ${
         isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'bg-slate-900/80 border-slate-800'
       }`}>
         <button
           type="button"
           onClick={() => setDashboardMode('gauges')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             dashboardMode === 'gauges'
               ? isRose
                 ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
@@ -91,7 +137,7 @@ export default function LiveDashboard({
         <button
           type="button"
           onClick={() => setDashboardMode('route')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             dashboardMode === 'route'
               ? isRose
                 ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
@@ -100,28 +146,13 @@ export default function LiveDashboard({
           }`}
         >
           <Map className="w-3.5 h-3.5" />
-          <span>Percurso Real (Visão Satélite Frontal)</span>
+          <span>Percurso Real (Ecrã Completo)</span>
         </button>
       </div>
 
-      {dashboardMode === 'route' ? (
-        <div className="w-full">
-          <RouteErrorBoundary>
-            <RouteMap
-              currentDistanceKm={sessionStats.distanceKm}
-              speedKmH={telemetry.speed}
-              cadenceRpm={telemetry.cadence}
-              themeConfig={themeConfig}
-              workoutStatus={workoutStatus}
-              googleMapsApiKey={settings?.googleMapsApiKey}
-            />
-          </RouteErrorBoundary>
-        </div>
-      ) : (
-        <>
-          {/* CLUSTER UNIFICADO PREMIUM: GAUGES COM DISTÂNCIA E CALORIAS INTEGRADAS NO MESMO PAINEL */}
+      {/* CLUSTER UNIFICADO PREMIUM: GAUGES COM DISTÂNCIA E CALORIAS INTEGRADAS NO MESMO PAINEL */}
       <div 
-        className="w-full rounded-[36px] p-6 lg:p-10 relative overflow-hidden flex flex-col items-center transition-all duration-700"
+        className="w-full rounded-3xl p-4 md:p-6 lg:p-7 relative overflow-hidden flex flex-col items-center transition-all duration-700"
         style={{
           background: themeConfig?.clusterBg || 'linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(8, 12, 20, 0.95) 50%, rgba(5, 8, 14, 0.98) 100%)',
           backdropFilter: 'blur(25px)',
@@ -170,16 +201,16 @@ export default function LiveDashboard({
               unit="km/h"
               title="VELOCIDADE"
               zones={speedZones}
-              size={290}
+              size={gaugeSize}
               accentColor={speedAccent}
               themeConfig={themeConfig}
             />
           </div>
 
           {/* 2. HUD CENTRAL DE TELEMETRIA: DISTÂNCIA & CALORIAS (Centro) */}
-          <div className="lg:col-span-4 w-full max-w-sm flex flex-col items-center justify-center lg:pt-[50px]">
+          <div className="lg:col-span-4 w-full max-w-sm flex flex-col items-center justify-center lg:pt-4">
             <div 
-              className="w-full rounded-3xl p-6 border transition-all relative overflow-hidden"
+              className="w-full rounded-2xl md:rounded-3xl p-4 md:p-5 border transition-all relative overflow-hidden"
               style={{
                 background: themeConfig?.hudCardBg || 'linear-gradient(180deg, rgba(12, 18, 30, 0.95) 0%, rgba(6, 10, 18, 0.98) 100%)',
                 borderColor: themeConfig?.hudCardBorder || `${speedAccent}35`,
@@ -293,7 +324,7 @@ export default function LiveDashboard({
               unit="RPM"
               title="CADÊNCIA"
               zones={cadenceZones}
-              size={290}
+              size={gaugeSize}
               accentColor={cadenceAccent}
               themeConfig={themeConfig}
             />
@@ -301,17 +332,6 @@ export default function LiveDashboard({
 
         </div>
       </div>
-
-      {/* Gráfico Dinâmico Centralizado */}
-      <div className="w-full max-w-4xl">
-        <LiveChart 
-          data={chartHistory} 
-          speedColor={speedAccent}
-          cadenceColor={cadenceAccent}
-        />
-      </div>
-    </>
-  )}
-</div>
+    </div>
   );
 }
