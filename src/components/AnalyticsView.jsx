@@ -367,7 +367,7 @@ export default function AnalyticsView({
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }} maxBarSize={48}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isRose ? '#4a0b5c' : '#1e293b'} opacity={0.5} />
                 <XAxis dataKey="name" stroke="#64748b" tick={{ fill: isRose ? '#f472b6' : '#64748b', fontSize: 11 }} />
 
@@ -392,7 +392,7 @@ export default function AnalyticsView({
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Bar dataKey="distance" name="Distância (km)" fill={isRose ? '#ff2d75' : '#10b981'} radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="distance" name="Distância (km)" fill={isRose ? '#ff2d75' : '#10b981'} radius={[6, 6, 0, 0]} maxBarSize={48} />
                   </>
                 )}
 
@@ -417,7 +417,7 @@ export default function AnalyticsView({
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Bar dataKey="calories" name="Energia (kcal)" fill={isRose ? '#9400D3' : '#f59e0b'} radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="calories" name="Energia (kcal)" fill={isRose ? '#9400D3' : '#f59e0b'} radius={[6, 6, 0, 0]} maxBarSize={48} />
                   </>
                 )}
 
@@ -443,8 +443,8 @@ export default function AnalyticsView({
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Bar dataKey="avgSpeed" name="Velocidade Média (km/h)" fill={isRose ? '#ff2d75' : '#38bdf8'} radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="maxSpeed" name="Velocidade Máxima (km/h)" fill={isRose ? '#9400D3' : '#06b6d4'} radius={[6, 6, 0, 0]} opacity={0.8} />
+                    <Bar dataKey="avgSpeed" name="Velocidade Média (km/h)" fill={isRose ? '#ff2d75' : '#38bdf8'} radius={[6, 6, 0, 0]} maxBarSize={36} />
+                    <Bar dataKey="maxSpeed" name="Velocidade Máxima (km/h)" fill={isRose ? '#9400D3' : '#06b6d4'} radius={[6, 6, 0, 0]} opacity={0.8} maxBarSize={36} />
                   </>
                 )}
               </BarChart>

@@ -111,43 +111,51 @@ export default function App() {
   const sessionSamplesRef = useRef([]);
 
   // Telemetry loop effect
+  // Telemetry loop effect (500ms high-refresh sampling rate for ultra-low latency!)
   useEffect(() => {
     let timer = null;
+    let tickCount = 0;
 
     if (workoutStatus === 'running') {
       timer = setInterval(async () => {
-        setElapsedSeconds((prev) => {
-          const nextSec = prev + 1;
-          const mins = Math.floor(nextSec / 60);
-          const secs = nextSec % 60;
-          const timeLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        tickCount += 1;
+        const isFullSecond = tickCount % 2 === 0;
 
-          let currentTick = null;
+        let nextSec = 0;
+        let timeLabel = '';
 
-          if (settings.mode === 'homeassistant') {
-            haServiceRef.current.fetchTelemetry()
-              .then((data) => {
-                applyTick(data, nextSec, timeLabel);
-              })
-              .catch(() => {
-                currentTick = simulatorRef.current.nextTick(false);
-                applyTick(currentTick, nextSec, timeLabel);
-              });
-          } else {
-            currentTick = simulatorRef.current.nextTick(false);
-            applyTick(currentTick, nextSec, timeLabel);
-          }
+        if (isFullSecond) {
+          setElapsedSeconds((prev) => {
+            const updated = prev + 1;
+            nextSec = updated;
+            const mins = Math.floor(updated / 60);
+            const secs = updated % 60;
+            timeLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
-          // Check if target countdown completed
-          if (targetSeconds > 0 && nextSec >= targetSeconds) {
-            setIsTargetReached(true);
-          }
+            // Check if target countdown completed
+            if (targetSeconds > 0 && updated >= targetSeconds) {
+              setIsTargetReached(true);
+            }
+            return updated;
+          });
+        }
 
-          return nextSec;
-        });
-      }, 1000);
+        if (settings.mode === 'homeassistant') {
+          haServiceRef.current.fetchTelemetry()
+            .then((data) => {
+              applyTick(data, 0.5, isFullSecond, nextSec, timeLabel);
+            })
+            .catch(() => {
+              const currentTick = simulatorRef.current.nextTick(false);
+              applyTick(currentTick, 0.5, isFullSecond, nextSec, timeLabel);
+            });
+        } else {
+          const currentTick = simulatorRef.current.nextTick(false);
+          applyTick(currentTick, 0.5, isFullSecond, nextSec, timeLabel);
+        }
+      }, 500);
     } else if (workoutStatus === 'idle') {
-      // In IDLE/Standby: read live bike sensors in real-time so gauges move immediately!
+      // In IDLE/Standby: read live bike sensors every 500ms so gauges react instantly!
       if (settings.mode === 'homeassistant') {
         timer = setInterval(async () => {
           haServiceRef.current.fetchTelemetry()
@@ -168,7 +176,7 @@ export default function App() {
               }
             })
             .catch(() => {});
-        }, 1000);
+        }, 500);
       }
     } else if (workoutStatus === 'paused') {
       timer = setInterval(() => {
@@ -188,7 +196,7 @@ export default function App() {
           const coolTick = simulatorRef.current.nextTick(true);
           setTelemetry(coolTick);
         }
-      }, 1000);
+      }, 500);
     }
 
     return () => {
@@ -204,8 +212,8 @@ export default function App() {
     }
   }, [isTargetReached, workoutStatus]);
 
-  // Apply tick data to session aggregates
-  const applyTick = (tick, currentSec, timeLabel) => {
+  // Apply tick data to session aggregates (supports 0.5s sub-second integration)
+  const applyTick = (tick, dt = 0.5, isFullSecond = false, currentSec = 0, timeLabel = '') => {
     setTelemetry({
       cadence: tick.cadence ?? 0,
       speed: tick.speed ?? 0,
@@ -214,41 +222,42 @@ export default function App() {
       heartRate: tick.heartRate ?? 0
     });
 
-    // Record sample for detailed replay
-    if (currentSec % 3 === 0 || currentSec <= 10) {
-      sessionSamplesRef.current.push({
-        time: `${Math.round(currentSec / 60)}m`,
-        cadence: tick.cadence,
-        speed: tick.speed,
-        power: tick.power,
-        resistance: tick.resistance
-      });
+    // Record sample for detailed replay and rolling chart on each full second
+    if (isFullSecond) {
+      if (currentSec % 3 === 0 || currentSec <= 10) {
+        sessionSamplesRef.current.push({
+          time: `${Math.round(currentSec / 60)}m`,
+          cadence: tick.cadence,
+          speed: tick.speed,
+          power: tick.power,
+          resistance: tick.resistance
+        });
+      }
+
+      if (timeLabel) {
+        setChartHistory((prevHistory) => {
+          const nextItem = {
+            time: timeLabel,
+            cadence: tick.cadence,
+            speed: tick.speed
+          };
+          const updated = [...prevHistory, nextItem];
+          return updated.length > 35 ? updated.slice(updated.length - 35) : updated;
+        });
+      }
     }
 
-    // Update real-time rolling chart (keep last 35 points)
-    setChartHistory((prevHistory) => {
-      const nextItem = {
-        time: timeLabel,
-        cadence: tick.cadence,
-        speed: tick.speed
-      };
-      const updated = [...prevHistory, nextItem];
-      return updated.length > 35 ? updated.slice(updated.length - 35) : updated;
-    });
-
-    // Update cumulative metrics according to official indoor bike formula
+    // Update cumulative metrics according to official indoor bike formula with dt factor
     setSessionStats((prev) => {
-      // Physical distance integration: (speed km/h) / 3600 = km pedaled per second
       const speedKmH = Number(tick.speed) || 0;
-      const distIncrement = speedKmH / 3600;
+      const distIncrement = (speedKmH / 3600) * dt;
       
-      // Calorie expenditure formula based on speed and cadence
       const cadenceRpm = Number(tick.cadence) || 0;
-      const calPerSecond = ((speedKmH * 0.22) + (cadenceRpm * 0.05)) / 60;
+      const calIncrement = (((speedKmH * 0.22) + (cadenceRpm * 0.05)) / 60) * dt;
       
-      // Session distance accumulates with continuous float precision (no premature truncation!)
+      // Session distance accumulates with continuous float precision
       const newDistance = prev.distanceKm + distIncrement;
-      const newCalories = prev.caloriesKcal + calPerSecond;
+      const newCalories = prev.caloriesKcal + calIncrement;
 
       const count = prev.samplesCount + 1;
       const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + speedKmH) / count).toFixed(1));
