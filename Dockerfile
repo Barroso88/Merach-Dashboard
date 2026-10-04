@@ -7,7 +7,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Production Stage: Ultra-lightweight Node.js 22 (Serves SPA + /ha-proxy CORS proxy)
+# Production Stage: Ultra-lightweight Node.js 22 (Serves SPA + /ha-proxy CORS proxy + Central Settings/Workouts Sync)
 FROM node:22-alpine
 
 WORKDIR /app
@@ -16,8 +16,14 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY server.js package.json ./
 
+# Create persistent storage directory
+RUN mkdir -p /app/data
+
 ENV NODE_ENV=production
 ENV PORT=80
+ENV DATA_DIR=/app/data
+
+VOLUME ["/app/data"]
 
 EXPOSE 80
 

@@ -233,6 +233,7 @@ export function saveCustomRoute(newRoute) {
     const filtered = existing.filter(r => r.id !== newRoute.id);
     const updated = [newRoute, ...filtered];
     localStorage.setItem(CUSTOM_ROUTES_KEY, JSON.stringify(updated));
+    syncRoutesToServer(updated);
     return updated;
   } catch (err) {
     console.error('Error saving custom route to storage:', err);
@@ -245,9 +246,41 @@ export function deleteCustomRoute(routeId) {
     const existing = getStoredCustomRoutes();
     const updated = existing.filter(r => r.id !== routeId);
     localStorage.setItem(CUSTOM_ROUTES_KEY, JSON.stringify(updated));
+    syncRoutesToServer(updated);
     return updated;
   } catch (err) {
     console.error('Error deleting custom route:', err);
     return [];
+  }
+}
+
+async function syncRoutesToServer(routes) {
+  try {
+    await fetch('/api/routes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(routes)
+    });
+  } catch {
+    // Graceful fallback
+  }
+}
+
+export async function fetchServerCustomRoutes() {
+  try {
+    const res = await fetch('/api/routes');
+    if (!res.ok) return null;
+    const serverRoutes = await res.json();
+    if (Array.isArray(serverRoutes) && serverRoutes.length > 0) {
+      localStorage.setItem(CUSTOM_ROUTES_KEY, JSON.stringify(serverRoutes));
+      return serverRoutes;
+    }
+    const local = getStoredCustomRoutes();
+    if (Array.isArray(local) && local.length > 0) {
+      syncRoutesToServer(local);
+    }
+    return local;
+  } catch {
+    return null;
   }
 }

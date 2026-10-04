@@ -1,4 +1,4 @@
-// LocalStorage Service for Official Merach Workout History & Settings
+// LocalStorage & Server Sync Service for Official Merach Workout History & Settings
 
 const STORAGE_KEY_WORKOUTS = 'merach_official_workouts_v2';
 const STORAGE_KEY_SETTINGS = 'merach_official_settings_v2';
@@ -58,42 +58,57 @@ const INITIAL_WORKOUTS = [
     avgCadence: 92,
     maxCadence: 100,
     avgSpeed: 26.0,
-    maxSpeed: 30.1,
-    distanceKm: 10.8,
-    caloriesKcal: 195,
+    maxSpeed: 30.5,
+    distanceKm: 10.5,
+    caloriesKcal: 220,
     avgResistance: 8,
-    notes: 'Giro leve e descontraído.',
+    notes: 'Recuperação ativa regenerativa.',
     samples: generateMockSessionSamples(25, 92, 26.0)
   },
   {
     id: 'wo-5',
-    title: 'Treino Intervalado Rápido',
-    date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+    title: 'Treino Intervalado de Alta Intensidade',
+    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     durationSeconds: 2400, // 40 min
-    avgCadence: 88,
-    maxCadence: 108,
-    avgSpeed: 33.2,
-    maxSpeed: 42.0,
-    distanceKm: 22.1,
-    caloriesKcal: 490,
-    avgResistance: 15,
-    notes: 'Acelerações fortes a cada 5 minutos.',
-    samples: generateMockSessionSamples(40, 88, 33.2)
+    avgCadence: 90,
+    maxCadence: 122,
+    avgSpeed: 34.2,
+    maxSpeed: 48.0,
+    distanceKm: 22.8,
+    caloriesKcal: 510,
+    avgResistance: 16,
+    notes: 'Séries de sprints de 1 minuto em rotação máxima.',
+    samples: generateMockSessionSamples(40, 90, 34.2)
   },
   {
     id: 'wo-6',
-    title: 'Endurance de Longa Duração',
-    date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    title: 'Pedal Longo de Domingo',
+    date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     durationSeconds: 3600, // 60 min
-    avgCadence: 84,
+    avgCadence: 80,
     maxCadence: 96,
     avgSpeed: 29.5,
-    maxSpeed: 36.8,
+    maxSpeed: 38.0,
     distanceKm: 29.5,
-    caloriesKcal: 610,
-    avgResistance: 13,
-    notes: '1 hora contínua de pedalada.',
-    samples: generateMockSessionSamples(60, 84, 29.5)
+    caloriesKcal: 590,
+    avgResistance: 11,
+    notes: 'Foco em consistência de cadência e respiração rítmica.',
+    samples: generateMockSessionSamples(60, 80, 29.5)
+  },
+  {
+    id: 'wo-7',
+    title: 'Desafio Contrarrelógio',
+    date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    durationSeconds: 1200, // 20 min
+    avgCadence: 98,
+    maxCadence: 118,
+    avgSpeed: 38.0,
+    maxSpeed: 46.5,
+    distanceKm: 12.6,
+    caloriesKcal: 310,
+    avgResistance: 15,
+    notes: 'Esforço máximo sustentado de limiar.',
+    samples: generateMockSessionSamples(20, 98, 38.0)
   }
 ];
 
@@ -132,6 +147,8 @@ export function saveWorkoutToStorage(workout) {
     const current = getStoredWorkouts();
     const updated = [workout, ...current];
     localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(updated));
+    // Asynchronously sync with central server
+    syncWorkoutsToServer(updated);
     return updated;
   } catch (err) {
     console.error('Error saving workout', err);
@@ -144,6 +161,8 @@ export function deleteWorkoutFromStorage(workoutId) {
     const current = getStoredWorkouts();
     const updated = current.filter(w => w.id !== workoutId);
     localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(updated));
+    // Asynchronously sync with central server
+    syncWorkoutsToServer(updated);
     return updated;
   } catch (err) {
     console.error('Error deleting workout', err);
@@ -153,6 +172,7 @@ export function deleteWorkoutFromStorage(workoutId) {
 
 export function resetWorkoutsToDefault() {
   localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(INITIAL_WORKOUTS));
+  syncWorkoutsToServer(INITIAL_WORKOUTS);
   return INITIAL_WORKOUTS;
 }
 
@@ -204,9 +224,89 @@ export function getStoredSettings() {
 export function saveStoredSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    // Asynchronously sync to central server so all other devices receive it
+    syncSettingsToServer(settings);
     return settings;
   } catch (err) {
     console.error('Error saving settings', err);
     return settings;
+  }
+}
+
+// ==========================================
+// CENTRAL SERVER SYNC (Unraid / Docker API)
+// ==========================================
+
+async function syncSettingsToServer(settings) {
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+  } catch {
+    // Graceful fallback for local dev or offline mode
+  }
+}
+
+async function syncWorkoutsToServer(workouts) {
+  try {
+    await fetch('/api/workouts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(workouts)
+    });
+  } catch {
+    // Graceful fallback
+  }
+}
+
+export async function fetchServerSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return null;
+    const serverSettings = await res.json();
+    if (serverSettings && typeof serverSettings === 'object' && Object.keys(serverSettings).length > 0) {
+      const local = getStoredSettings();
+      // Server values take precedence (central single source of truth)
+      const merged = {
+        ...local,
+        ...serverSettings,
+        haEntities: {
+          ...local.haEntities,
+          ...(serverSettings.haEntities || {})
+        }
+      };
+      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(merged));
+      return merged;
+    }
+    // If server has no settings yet, push local settings to server
+    const current = getStoredSettings();
+    if (current.haToken) {
+      syncSettingsToServer(current);
+    }
+    return current;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchServerWorkouts() {
+  try {
+    const res = await fetch('/api/workouts');
+    if (!res.ok) return null;
+    const serverWorkouts = await res.json();
+    if (Array.isArray(serverWorkouts) && serverWorkouts.length > 0) {
+      localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(serverWorkouts));
+      return serverWorkouts;
+    }
+    // If server is empty, initialize server with local workouts
+    const local = getStoredWorkouts();
+    if (Array.isArray(local) && local.length > 0) {
+      syncWorkoutsToServer(local);
+    }
+    return local;
+  } catch {
+    return null;
   }
 }

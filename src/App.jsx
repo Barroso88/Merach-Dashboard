@@ -15,7 +15,9 @@ import {
   deleteWorkoutFromStorage,
   resetWorkoutsToDefault,
   getStoredSettings,
-  saveStoredSettings
+  saveStoredSettings,
+  fetchServerSettings,
+  fetchServerWorkouts
 } from './services/storageService';
 import { THEMES } from './constants/themes';
 import { ChevronDown } from 'lucide-react';
@@ -346,6 +348,25 @@ export default function App() {
       document.body.style.backgroundColor = active.bgBody;
     }
   }, [currentTheme]);
+
+  // Central Server Synchronization (Unraid Docker backend)
+  // Ensures any device (tablet on the bike, mobile, PC) instantly receives the saved HA token & settings
+  useEffect(() => {
+    fetchServerSettings().then((serverSettings) => {
+      if (serverSettings) {
+        setSettings(serverSettings);
+        if (haServiceRef.current) {
+          haServiceRef.current.updateConfig(serverSettings);
+        }
+      }
+    });
+
+    fetchServerWorkouts().then((serverWorkouts) => {
+      if (serverWorkouts && Array.isArray(serverWorkouts)) {
+        setWorkouts(serverWorkouts);
+      }
+    });
+  }, []);
 
   const activeTheme = THEMES[currentTheme] || THEMES.cyan;
   const isRose = currentTheme === 'rose';
