@@ -79,6 +79,13 @@ export const DEFAULT_SETTINGS = {
     heartRate: '',
     distance: '',
     calories: ''
+  },
+  postgresConfig: {
+    host: '',
+    port: 5432,
+    user: 'postgres',
+    password: '',
+    database: 'merach'
   }
 };
 
@@ -105,6 +112,10 @@ export function getStoredSettings() {
       haEntities: {
         ...DEFAULT_SETTINGS.haEntities,
         ...(parsed?.haEntities || {})
+      },
+      postgresConfig: {
+        ...DEFAULT_SETTINGS.postgresConfig,
+        ...(parsed?.postgresConfig || {})
       }
     };
   } catch (err) {

@@ -12,4 +12,11 @@
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
   <Icon>https://raw.githubusercontent.com/Barroso88/Merach-Dashboard/main/public/cyclist.gif</Icon>
   <Config Name="WebUI Port" Target="80" Default="8080" Mode="tcp" Description="Porta Web do Painel Merach" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Dados da Aplicação (AppData)" Target="/app/data" Default="/mnt/user/appdata/merach-dashboard" Mode="rw" Description="Diretoria de dados persistentes para treinos, percursos e definições locais" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/merach-dashboard</Config>
+  <Config Name="PostgreSQL Host" Target="PG_HOST" Default="" Mode="" Description="IP ou Hostname do PostgreSQL no Unraid (ex: 192.168.1.150 ou nome do container)" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="PostgreSQL Port" Target="PG_PORT" Default="5432" Mode="" Description="Porta do PostgreSQL (Normalmente 5432)" Type="Variable" Display="always" Required="false" Mask="false">5432</Config>
+  <Config Name="PostgreSQL User" Target="PG_USER" Default="postgres" Mode="" Description="Utilizador da base de dados PostgreSQL" Type="Variable" Display="always" Required="false" Mask="false">postgres</Config>
+  <Config Name="PostgreSQL Password" Target="PG_PASSWORD" Default="" Mode="" Description="Palavra-passe da base de dados PostgreSQL" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="PostgreSQL Database" Target="PG_DATABASE" Default="merach" Mode="" Description="Nome da base de dados (ex: merach)" Type="Variable" Display="always" Required="false" Mask="false">merach</Config>
+  <Config Name="PostgreSQL Connection URL" Target="DATABASE_URL" Default="" Mode="" Description="Em alternativa, Connection String PostgreSQL completa (ex: postgresql://user:pass@host:5432/merach)" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
 </Container>

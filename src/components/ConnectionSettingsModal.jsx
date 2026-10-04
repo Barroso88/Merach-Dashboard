@@ -15,13 +15,6 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
-  Zap,
-  Gauge,
-  Heart,
-  Flame,
-  Milestone,
-  MapPin,
-  Camera,
   Database
 } from 'lucide-react';
 import { DEFAULT_SETTINGS } from '../services/storageService';
@@ -44,10 +37,20 @@ export default function ConnectionSettingsModal({
     haEntities: {
       ...(DEFAULT_SETTINGS.haEntities || {}),
       ...(settings?.haEntities || {})
+    },
+    postgresConfig: {
+      host: '',
+      port: 5432,
+      user: 'postgres',
+      password: '',
+      database: 'merach',
+      ...(DEFAULT_SETTINGS.postgresConfig || {}),
+      ...(settings?.postgresConfig || {})
     }
   }));
   const [testingStatus, setTestingStatus] = useState(null);
   const [discoveringStatus, setDiscoveringStatus] = useState(null);
+  const [postgresTestStatus, setPostgresTestStatus] = useState(null);
   const [detectedSensors, setDetectedSensors] = useState([]);
   const [sensorFilter, setSensorFilter] = useState('merach');
   const [showCorsHelp, setShowCorsHelp] = useState(false);
@@ -63,10 +66,20 @@ export default function ConnectionSettingsModal({
         haEntities: {
           ...(DEFAULT_SETTINGS.haEntities || {}),
           ...(settings.haEntities || {})
+        },
+        postgresConfig: {
+          host: '',
+          port: 5432,
+          user: 'postgres',
+          password: '',
+          database: 'merach',
+          ...(DEFAULT_SETTINGS.postgresConfig || {}),
+          ...(settings.postgresConfig || {})
         }
       });
       setTestingStatus(null);
       setDiscoveringStatus(null);
+      setPostgresTestStatus(null);
       setSaveSuccess(false);
     }
   }, [isOpen, settings]);
@@ -165,6 +178,37 @@ export default function ConnectionSettingsModal({
         [key]: entityId
       }
     }));
+  };
+
+  const handleTestPostgresConnection = async () => {
+    setPostgresTestStatus({ loading: true, message: 'A testar ligação ao PostgreSQL no Unraid...' });
+    try {
+      const res = await fetch('/api/postgres/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData.postgresConfig || {})
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPostgresTestStatus({
+          loading: false,
+          success: true,
+          message: data.message || 'Ligação ao PostgreSQL estabelecida com sucesso!'
+        });
+      } else {
+        setPostgresTestStatus({
+          loading: false,
+          success: false,
+          message: data.error || 'Falha ao ligar ao PostgreSQL. Verifique os dados de acesso.'
+        });
+      }
+    } catch (err) {
+      setPostgresTestStatus({
+        loading: false,
+        success: false,
+        message: `Erro ao contactar o servidor: ${err.message}`
+      });
+    }
   };
 
   const handleSave = () => {
@@ -848,31 +892,154 @@ export default function ConnectionSettingsModal({
           </div>
 
           {/* Base de Dados / Armazenamento (PostgreSQL Unraid) */}
-          <div className={`p-4 rounded-2xl border space-y-3 ${
+          <div className={`p-4 rounded-2xl border space-y-4 ${
             isRose ? 'bg-[#3b0849]/30 border-[#ff2d75]/30' : 'bg-slate-900/60 border-slate-800'
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Database className={`w-4 h-4 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
                 <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  Base de Dados (Unraid)
+                  Base de Dados PostgreSQL (Unraid)
                 </span>
               </div>
-              {settings?.postgresConnected ? (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+              {settings?.postgresConnected || postgresTestStatus?.success ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" /> PostgreSQL Ativo
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
                   Ficheiro Local (/app/data)
                 </span>
               )}
             </div>
+
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              {settings?.postgresConnected
-                ? 'Os seus treinos, rotas e definições estão a ser guardados com persistência na base de dados PostgreSQL no Unraid.'
-                : 'Para ligar a base de dados PostgreSQL, adicione a variável DATABASE_URL (ex: postgresql://user:pass@192.168.1.xxx:5432/merach) ou PG_HOST nas definições do container no Unraid.'}
+              Guarda os treinos, estatísticas e percursos personalizados na base de dados PostgreSQL no Unraid com persistência total. Se os campos estiverem vazios, é utilizado o armazenamento em ficheiros locais (<code className="text-slate-300">/app/data</code>).
             </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-semibold mb-1 text-slate-300">
+                  Host / IP do PostgreSQL:
+                </label>
+                <input
+                  type="text"
+                  value={formData.postgresConfig?.host || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    postgresConfig: { ...formData.postgresConfig, host: e.target.value }
+                  })}
+                  placeholder="ex: 192.168.1.150 ou postgres"
+                  className={`w-full rounded-xl px-3 py-2 font-mono text-xs border ${
+                    themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold mb-1 text-slate-300">
+                  Porta:
+                </label>
+                <input
+                  type="number"
+                  value={formData.postgresConfig?.port || 5432}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    postgresConfig: { ...formData.postgresConfig, port: parseInt(e.target.value, 10) || 5432 }
+                  })}
+                  placeholder="5432"
+                  className={`w-full rounded-xl px-3 py-2 font-mono text-xs border ${
+                    themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold mb-1 text-slate-300">
+                  Utilizador:
+                </label>
+                <input
+                  type="text"
+                  value={formData.postgresConfig?.user || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    postgresConfig: { ...formData.postgresConfig, user: e.target.value }
+                  })}
+                  placeholder="postgres"
+                  className={`w-full rounded-xl px-3 py-2 font-mono text-xs border ${
+                    themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold mb-1 text-slate-300">
+                  Palavra-passe:
+                </label>
+                <input
+                  type="password"
+                  value={formData.postgresConfig?.password || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    postgresConfig: { ...formData.postgresConfig, password: e.target.value }
+                  })}
+                  placeholder="••••••••"
+                  className={`w-full rounded-xl px-3 py-2 font-mono text-xs border ${
+                    themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold mb-1 text-slate-300">
+                  Nome da Base de Dados:
+                </label>
+                <input
+                  type="text"
+                  value={formData.postgresConfig?.database || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    postgresConfig: { ...formData.postgresConfig, database: e.target.value }
+                  })}
+                  placeholder="merach"
+                  className={`w-full rounded-xl px-3 py-2 font-mono text-xs border ${
+                    themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Test PostgreSQL Connection Button */}
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleTestPostgresConnection}
+                disabled={postgresTestStatus?.loading}
+                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  isRose
+                    ? 'bg-[#ff2d75]/15 border-[#ff2d75]/40 text-[#ff85b3] hover:bg-[#ff2d75]/25'
+                    : 'bg-sky-500/15 border-sky-500/40 text-sky-300 hover:bg-sky-500/25'
+                }`}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${postgresTestStatus?.loading ? 'animate-spin' : ''}`} />
+                <span>{postgresTestStatus?.loading ? 'A testar ligação...' : 'Testar Ligação PostgreSQL'}</span>
+              </button>
+
+              {postgresTestStatus && (
+                <div className={`px-3 py-1.5 rounded-xl text-xs flex items-center gap-2 ${
+                  postgresTestStatus.success
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                }`}>
+                  {postgresTestStatus.success ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  )}
+                  <span className="truncate">{postgresTestStatus.message}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Reset Demo Data Button */}

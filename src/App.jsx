@@ -19,6 +19,7 @@ import {
   fetchServerSettings,
   fetchServerWorkouts
 } from './services/storageService';
+import { fetchServerCustomRoutes } from './services/routePlannerService';
 import { THEMES } from './constants/themes';
 import { ChevronDown } from 'lucide-react';
 
@@ -413,6 +414,8 @@ export default function App() {
         setWorkouts(serverWorkouts);
       }
     });
+
+    fetchServerCustomRoutes();
   }, []);
 
   const activeTheme = THEMES[currentTheme] || THEMES.cyan;

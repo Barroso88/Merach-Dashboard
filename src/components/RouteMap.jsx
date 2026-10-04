@@ -27,7 +27,12 @@ import {
   parseGpxRoute,
   getRiderPositionAlongRoute
 } from '../services/routesData';
-import { getStoredCustomRoutes, deleteCustomRoute } from '../services/routePlannerService';
+import {
+  getStoredCustomRoutes,
+  saveCustomRoute,
+  deleteCustomRoute,
+  fetchServerCustomRoutes
+} from '../services/routePlannerService';
 import CarView3DMap from './CarView3DMap';
 import RoutePlannerModal from './RoutePlannerModal';
 import { getStoredSettings } from '../services/storageService';
@@ -79,6 +84,15 @@ export default function RouteMap({
   const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Sync server custom routes on mount (e.g. from PostgreSQL / backend routes.json)
+  useEffect(() => {
+    fetchServerCustomRoutes().then((serverRoutes) => {
+      if (Array.isArray(serverRoutes) && serverRoutes.length > 0) {
+        setRoutesList([...serverRoutes, ...PRESET_ROUTES]);
+      }
+    });
+  }, []);
+
   // Active route
   const currentRoute = useMemo(() => {
     return routesList.find(r => r.id === selectedRouteId) || routesList[0];
@@ -100,7 +114,8 @@ export default function RouteMap({
         const text = event.target?.result;
         if (typeof text === 'string') {
           const parsed = parseGpxRoute(text, file.name);
-          setRoutesList(prev => [parsed, ...prev]);
+          const updatedCustom = saveCustomRoute(parsed);
+          setRoutesList([...updatedCustom, ...PRESET_ROUTES]);
           setSelectedRouteId(parsed.id);
           setIsRouteSelectorOpen(false);
         }

@@ -28,44 +28,7 @@ const ROUTES_FILE = path.join(DATA_DIR, 'routes.json');
 // ==========================================
 let dbPool = null;
 let isPostgresReady = false;
-
-const pgHost = process.env.PG_HOST || process.env.PGHOST;
-const databaseUrl = process.env.DATABASE_URL;
-
-if (databaseUrl || pgHost) {
-  try {
-    const poolConfig = databaseUrl
-      ? { connectionString: databaseUrl }
-      : {
-          host: pgHost,
-          port: parseInt(process.env.PG_PORT || process.env.PGPORT || '5432', 10),
-          user: process.env.PG_USER || process.env.PGUSER || 'postgres',
-          password: process.env.PG_PASSWORD || process.env.PGPASSWORD || '',
-          database: process.env.PG_DATABASE || process.env.PGDATABASE || 'merach'
-        };
-
-    dbPool = new Pool({
-      ...poolConfig,
-      connectionTimeoutMillis: 5000,
-      idleTimeoutMillis: 30000,
-      max: 10
-    });
-
-    dbPool.query('SELECT NOW()')
-      .then(async () => {
-        console.log('✅ Ligado ao PostgreSQL no Unraid com sucesso!');
-        await initPostgresTables();
-        isPostgresReady = true;
-      })
-      .catch((err) => {
-        console.warn('⚠️ Falha ao contactar PostgreSQL, a usar armazenamento local em ficheiro:', err.message);
-        isPostgresReady = false;
-      });
-  } catch (err) {
-    console.warn('⚠️ Erro ao instanciar PostgreSQL Pool:', err.message);
-    isPostgresReady = false;
-  }
-}
+let lastPostgresError = null;
 
 async function initPostgresTables() {
   if (!dbPool) return;
@@ -106,8 +69,152 @@ async function initPostgresTables() {
     console.log('✅ Tabelas do PostgreSQL (settings, workouts, routes) verificadas e ativas!');
   } catch (err) {
     console.error('⚠️ Erro ao criar tabelas no PostgreSQL:', err.message);
+    throw err;
   }
 }
+
+async function upsertWorkoutToPostgres(w) {
+  if (!dbPool || !w || !w.id) return;
+  const wId = String(w.id);
+  const wTitle = String(w.title || 'Treino Merach Bike');
+  const wDate = new Date(w.date || Date.now()).toISOString();
+  const wDuration = Math.round(Number(w.durationSeconds || w.duration) || 0);
+  const wDistance = Number(Number(w.distanceKm || w.distance || 0).toFixed(2));
+  const wCalories = Math.round(Number(w.caloriesKcal || w.calories || 0));
+  const wAvgSpeed = Number(Number(w.avgSpeed || 0).toFixed(1));
+  const wMaxSpeed = Number(Number(w.maxSpeed || 0).toFixed(1));
+  const wAvgCadence = Math.round(Number(w.avgCadence || 0));
+  const wMaxCadence = Math.round(Number(w.maxCadence || 0));
+  const wAvgResistance = Math.round(Number(w.avgResistance || 0));
+  const wNotes = String(w.notes || '');
+  const wSamples = JSON.stringify(w.samples || []);
+  const wRawData = JSON.stringify(w);
+
+  await dbPool.query(`
+    INSERT INTO merach_workouts (
+      id, title, date, duration_seconds, distance_km, calories_kcal,
+      avg_speed, max_speed, avg_cadence, max_cadence, avg_resistance,
+      notes, samples, raw_data
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      date = EXCLUDED.date,
+      duration_seconds = EXCLUDED.duration_seconds,
+      distance_km = EXCLUDED.distance_km,
+      calories_kcal = EXCLUDED.calories_kcal,
+      avg_speed = EXCLUDED.avg_speed,
+      max_speed = EXCLUDED.max_speed,
+      avg_cadence = EXCLUDED.avg_cadence,
+      max_cadence = EXCLUDED.max_cadence,
+      avg_resistance = EXCLUDED.avg_resistance,
+      notes = EXCLUDED.notes,
+      samples = EXCLUDED.samples,
+      raw_data = EXCLUDED.raw_data
+  `, [
+    wId, wTitle, wDate, wDuration, wDistance, wCalories,
+    wAvgSpeed, wMaxSpeed, wAvgCadence, wMaxCadence, wAvgResistance,
+    wNotes, wSamples, wRawData
+  ]);
+}
+
+async function upsertRouteToPostgres(r) {
+  if (!dbPool || !r || !r.id) return;
+  const rId = String(r.id);
+  const rTitle = String(r.name || r.title || 'Percurso');
+  const rData = JSON.stringify(r);
+
+  await dbPool.query(`
+    INSERT INTO merach_routes (id, title, data)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      data = EXCLUDED.data
+  `, [rId, rTitle, rData]);
+}
+
+async function autoMigrateLocalDataToPostgres() {
+  if (!dbPool || !isPostgresReady) return;
+  try {
+    const localWorkouts = readJsonFile(WORKOUTS_FILE, []).filter(w => w && !isMockWorkout(w.id));
+    if (localWorkouts.length > 0) {
+      for (const w of localWorkouts) {
+        await upsertWorkoutToPostgres(w);
+      }
+      console.log(`🔄 Sincronizados ${localWorkouts.length} treinos locais para o PostgreSQL.`);
+    }
+
+    const localRoutes = readJsonFile(ROUTES_FILE, []);
+    if (localRoutes.length > 0) {
+      for (const r of localRoutes) {
+        await upsertRouteToPostgres(r);
+      }
+      console.log(`🔄 Sincronizadas ${localRoutes.length} rotas personalizadas para o PostgreSQL.`);
+    }
+  } catch (err) {
+    console.warn('Aviso na migração inicial para Postgres:', err.message);
+  }
+}
+
+async function connectPostgres(configOverride = null) {
+  const currentSettings = readJsonFile(SETTINGS_FILE, {});
+  const savedPg = currentSettings?.postgresConfig || {};
+
+  const host = configOverride?.host || process.env.PG_HOST || process.env.PGHOST || savedPg.host;
+  const dbUrl = configOverride?.databaseUrl || process.env.DATABASE_URL || savedPg.databaseUrl;
+  const port = parseInt(configOverride?.port || process.env.PG_PORT || process.env.PGPORT || savedPg.port || '5432', 10);
+  const user = configOverride?.user || process.env.PG_USER || process.env.PGUSER || savedPg.user || 'postgres';
+  const password = configOverride?.password !== undefined 
+    ? configOverride.password 
+    : (process.env.PG_PASSWORD ?? process.env.PGPASSWORD ?? savedPg.password ?? '');
+  const database = configOverride?.database || process.env.PG_DATABASE || process.env.PGDATABASE || savedPg.database || 'merach';
+
+  if (!dbUrl && !host) {
+    isPostgresReady = false;
+    lastPostgresError = 'Nenhum host ou URL de PostgreSQL configurado';
+    return { success: false, error: lastPostgresError };
+  }
+
+  const poolConfig = dbUrl
+    ? { connectionString: dbUrl }
+    : {
+        host,
+        port,
+        user,
+        password,
+        database
+      };
+
+  try {
+    if (dbPool) {
+      try { await dbPool.end(); } catch {}
+    }
+
+    const newPool = new Pool({
+      ...poolConfig,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000,
+      max: 10
+    });
+
+    await newPool.query('SELECT NOW()');
+    dbPool = newPool;
+    await initPostgresTables();
+    isPostgresReady = true;
+    lastPostgresError = null;
+    console.log(`✅ Ligado ao PostgreSQL no Unraid com sucesso (${dbUrl ? 'URL' : `${host}:${port}/${database}`})!`);
+
+    await autoMigrateLocalDataToPostgres();
+    return { success: true };
+  } catch (err) {
+    console.warn('⚠️ Falha ao contactar PostgreSQL, a usar armazenamento local em ficheiro:', err.message);
+    isPostgresReady = false;
+    lastPostgresError = err.message;
+    return { success: false, error: err.message };
+  }
+}
+
+// Initial connection attempt on server launch
+connectPostgres().catch(() => {});
 
 function isMockWorkout(id) {
   return ['wo-1', 'wo-2', 'wo-3', 'wo-4', 'wo-5', 'wo-6', 'wo-7'].includes(id);
@@ -225,7 +332,30 @@ const server = http.createServer(async (req, res) => {
     return res.end('OK');
   }
 
-  // 3. Centralized Settings API (PostgreSQL / JSON file / Environment Variables)
+  // 3. PostgreSQL Live Test Endpoint
+  if (parsedUrl.pathname === '/api/postgres/test') {
+    if (req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        const testRes = await connectPostgres(body);
+        if (testRes.success) {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          return res.end(JSON.stringify({ 
+            success: true, 
+            message: 'Ligação ao PostgreSQL estabelecida com sucesso! Tabelas verificadas.' 
+          }));
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          return res.end(JSON.stringify({ success: false, error: testRes.error }));
+        }
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    }
+  }
+
+  // 4. Centralized Settings API (PostgreSQL / JSON file / Environment Variables)
   if (parsedUrl.pathname === '/api/settings') {
     if (req.method === 'GET') {
       let saved = {};
@@ -251,7 +381,12 @@ const server = http.createServer(async (req, res) => {
       if (process.env.CF_CLIENT_SECRET) envSettings.cfClientSecret = process.env.CF_CLIENT_SECRET;
       if (process.env.GOOGLE_MAPS_API_KEY) envSettings.googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-      const merged = { ...saved, ...envSettings, postgresConnected: isPostgresReady };
+      const merged = { 
+        ...saved, 
+        ...envSettings, 
+        postgresConnected: isPostgresReady,
+        postgresError: lastPostgresError
+      };
       res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
       return res.end(JSON.stringify(merged));
     }
@@ -277,6 +412,11 @@ const server = http.createServer(async (req, res) => {
         // Save to file backup
         writeJsonFile(SETTINGS_FILE, updated);
 
+        // If postgresConfig was updated, dynamically connect
+        if (body.postgresConfig) {
+          await connectPostgres(body.postgresConfig);
+        }
+
         // Save to PostgreSQL if connected
         if (isPostgresReady && dbPool) {
           try {
@@ -291,7 +431,12 @@ const server = http.createServer(async (req, res) => {
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-        return res.end(JSON.stringify({ success: true, settings: updated }));
+        return res.end(JSON.stringify({ 
+          success: true, 
+          settings: updated, 
+          postgresConnected: isPostgresReady,
+          postgresError: lastPostgresError 
+        }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify({ error: err.message }));
@@ -299,7 +444,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 4. Centralized Workouts API (PostgreSQL / JSON storage)
+  // 5. Centralized Workouts API (PostgreSQL / JSON storage)
   if (parsedUrl.pathname === '/api/workouts') {
     if (req.method === 'GET') {
       let workouts = [];
@@ -330,67 +475,58 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const list = Array.isArray(body) ? body.filter(w => w && !isMockWorkout(w.id)) : [];
+        const incoming = Array.isArray(body) ? body : (body && body.id ? [body] : []);
+        const list = incoming.filter(w => w && !isMockWorkout(w.id));
+
+        // Merge incoming workouts with existing list for backup file
+        const currentList = readJsonFile(WORKOUTS_FILE, []).filter(w => w && !isMockWorkout(w.id));
+        const mergedMap = new Map();
+        for (const w of currentList) if (w && w.id) mergedMap.set(w.id, w);
+        for (const w of list) if (w && w.id) mergedMap.set(w.id, w);
+        const allWorkouts = Array.from(mergedMap.values()).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
         // Save to file backup
-        writeJsonFile(WORKOUTS_FILE, list);
+        writeJsonFile(WORKOUTS_FILE, allWorkouts);
 
         // Save to PostgreSQL if available
         if (isPostgresReady && dbPool) {
           try {
             for (const w of list) {
-              await dbPool.query(`
-                INSERT INTO merach_workouts (
-                  id, title, date, duration_seconds, distance_km, calories_kcal,
-                  avg_speed, max_speed, avg_cadence, max_cadence, avg_resistance,
-                  notes, samples, raw_data
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-                ON CONFLICT (id) DO UPDATE SET
-                  title = EXCLUDED.title,
-                  date = EXCLUDED.date,
-                  duration_seconds = EXCLUDED.duration_seconds,
-                  distance_km = EXCLUDED.distance_km,
-                  calories_kcal = EXCLUDED.calories_kcal,
-                  avg_speed = EXCLUDED.avg_speed,
-                  max_speed = EXCLUDED.max_speed,
-                  avg_cadence = EXCLUDED.avg_cadence,
-                  max_cadence = EXCLUDED.max_cadence,
-                  avg_resistance = EXCLUDED.avg_resistance,
-                  notes = EXCLUDED.notes,
-                  samples = EXCLUDED.samples,
-                  raw_data = EXCLUDED.raw_data
-              `, [
-                w.id,
-                w.title || 'Treino Merach Bike',
-                w.date || new Date().toISOString(),
-                w.durationSeconds || 0,
-                w.distanceKm || 0,
-                w.caloriesKcal || 0,
-                w.avgSpeed || 0,
-                w.maxSpeed || 0,
-                w.avgCadence || 0,
-                w.maxCadence || 0,
-                w.avgResistance || 0,
-                w.notes || '',
-                JSON.stringify(w.samples || []),
-                JSON.stringify(w)
-              ]);
+              await upsertWorkoutToPostgres(w);
             }
-
-            // Delete removed workouts from PostgreSQL
-            const validIds = list.map(w => w.id);
-            if (validIds.length > 0) {
-              await dbPool.query('DELETE FROM merach_workouts WHERE id != ALL($1)', [validIds]);
-            } else {
-              await dbPool.query('DELETE FROM merach_workouts');
-            }
+            console.log(`✅ ${list.length} treino(s) guardado(s) com sucesso no PostgreSQL.`);
           } catch (err) {
             console.error('Erro ao guardar treinos no PostgreSQL:', err.message);
           }
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-        return res.end(JSON.stringify({ success: true, count: list.length }));
+        return res.end(JSON.stringify({ success: true, count: list.length, postgresConnected: isPostgresReady }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ error: err.message }));
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      try {
+        const body = await readBody(req);
+        const targetId = body?.id || parsedUrl.searchParams.get('id');
+        if (targetId) {
+          const currentList = readJsonFile(WORKOUTS_FILE, []).filter(w => w.id !== targetId);
+          writeJsonFile(WORKOUTS_FILE, currentList);
+
+          if (isPostgresReady && dbPool) {
+            try {
+              await dbPool.query('DELETE FROM merach_workouts WHERE id = $1', [targetId]);
+              console.log(`🗑️ Treino ${targetId} removido do PostgreSQL.`);
+            } catch (err) {
+              console.error('Erro ao remover treino no PostgreSQL:', err.message);
+            }
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ success: true }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify({ error: err.message }));
@@ -398,7 +534,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 5. Centralized Custom Routes API
+  // 6. Centralized Custom Routes API
   if (parsedUrl.pathname === '/api/routes') {
     if (req.method === 'GET') {
       let routes = [];
@@ -419,29 +555,53 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const list = Array.isArray(body) ? body : [];
-        writeJsonFile(ROUTES_FILE, list);
+        const incoming = Array.isArray(body) ? body : (body && body.id ? [body] : []);
+        const list = incoming.filter(r => r && r.id);
+
+        const currentList = readJsonFile(ROUTES_FILE, []);
+        const mergedMap = new Map();
+        for (const r of currentList) if (r && r.id) mergedMap.set(r.id, r);
+        for (const r of list) if (r && r.id) mergedMap.set(r.id, r);
+        const allRoutes = Array.from(mergedMap.values());
+
+        writeJsonFile(ROUTES_FILE, allRoutes);
 
         if (isPostgresReady && dbPool) {
           try {
             for (const r of list) {
-              await dbPool.query(`
-                INSERT INTO merach_routes (id, title, data)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, data = EXCLUDED.data
-              `, [r.id, r.name || 'Percurso', JSON.stringify(r)]);
+              await upsertRouteToPostgres(r);
             }
-            const ids = list.map(r => r.id);
-            if (ids.length > 0) {
-              await dbPool.query('DELETE FROM merach_routes WHERE id != ALL($1)', [ids]);
-            } else {
-              await dbPool.query('DELETE FROM merach_routes');
-            }
+            console.log(`✅ ${list.length} percurso(s) guardado(s) com sucesso no PostgreSQL.`);
           } catch (err) {
             console.error('Erro ao guardar rotas no PostgreSQL:', err.message);
           }
         }
 
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ success: true, count: list.length, postgresConnected: isPostgresReady }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ error: err.message }));
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      try {
+        const body = await readBody(req);
+        const targetId = body?.id || parsedUrl.searchParams.get('id');
+        if (targetId) {
+          const currentList = readJsonFile(ROUTES_FILE, []).filter(r => r.id !== targetId);
+          writeJsonFile(ROUTES_FILE, currentList);
+
+          if (isPostgresReady && dbPool) {
+            try {
+              await dbPool.query('DELETE FROM merach_routes WHERE id = $1', [targetId]);
+              console.log(`🗑️ Rota ${targetId} removida do PostgreSQL.`);
+            } catch (err) {
+              console.error('Erro ao remover rota no PostgreSQL:', err.message);
+            }
+          }
+        }
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify({ success: true }));
       } catch (err) {
