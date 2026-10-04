@@ -39,6 +39,40 @@ export default function StreetViewPanoramaView({
   const [autoHeading, setAutoHeading] = useState(true);
   const [currentPanoInfo, setCurrentPanoInfo] = useState(null);
   const [userInteracting, setUserInteracting] = useState(false);
+  const [invertColors, setInvertColors] = useState(true); // Reverses Google's developer mode negative effect
+  const [showBillingTip, setShowBillingTip] = useState(false);
+
+  // Clean Google's "For development purposes only" watermark & dark tint overlays
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const cleanDevOverlays = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const allElements = container.querySelectorAll('*');
+      allElements.forEach(el => {
+        if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+          if (el.textContent && el.textContent.includes('For development purposes only')) {
+            el.style.display = 'none';
+            if (el.parentElement) {
+              el.parentElement.style.display = 'none';
+            }
+          }
+        }
+      });
+    };
+
+    const observer = new MutationObserver(cleanDevOverlays);
+    observer.observe(containerRef.current, { childList: true, subtree: true });
+
+    const interval = setInterval(cleanDevOverlays, 600);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(interval);
+    };
+  }, []);
 
   // Calculate realistic camera pitch based on road gradient (climbing looks slightly up, descent looks down)
   const targetPitch = Math.max(-12, Math.min(12, gradient * 0.8));
@@ -219,8 +253,11 @@ export default function StreetViewPanoramaView({
       {/* Street View Google Maps Container */}
       <div
         ref={containerRef}
-        className="w-full h-full z-0"
-        style={{ minHeight: '100%' }}
+        className="w-full h-full z-0 transition-[filter] duration-300"
+        style={{
+          minHeight: '100%',
+          filter: invertColors ? 'invert(100%)' : 'none'
+        }}
       />
 
       {/* Loading Overlay */}
@@ -328,8 +365,34 @@ export default function StreetViewPanoramaView({
             </div>
           </div>
 
-          {/* Camera Controls (Top Right) */}
+          {/* Camera & Color Controls (Top Right) */}
           <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
+            {/* Color Mode Toggle (Fix Google Dev Inverted Shader) */}
+            <button
+              type="button"
+              onClick={() => setInvertColors(!invertColors)}
+              className={`px-3 py-2 rounded-2xl backdrop-blur-xl border text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer ${
+                invertColors
+                  ? isRose
+                    ? 'bg-[#ff2d75]/90 border-[#ff2d75] text-white shadow-[#ff2d75]/40'
+                    : 'bg-emerald-500 border-emerald-400 text-slate-950 font-black shadow-emerald-500/30'
+                  : 'bg-black/75 border-white/20 text-slate-200 hover:text-white'
+              }`}
+              title="Alternar correção de cores (reverter negativo da Google)"
+            >
+              <span>🎨 {invertColors ? 'Cores Reais' : 'Original Dev'}</span>
+            </button>
+
+            {/* Google Billing Info Button */}
+            <button
+              type="button"
+              onClick={() => setShowBillingTip(!showBillingTip)}
+              className="w-9 h-9 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/75 hover:bg-black/95 text-amber-300 hover:text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer shadow-lg"
+              title="Informação sobre a marca da Google"
+            >
+              ℹ️
+            </button>
+
             {/* Re-center / Auto Heading Button */}
             <button
               type="button"
@@ -347,6 +410,42 @@ export default function StreetViewPanoramaView({
               <span className="hidden sm:inline">Centrar Estrada</span>
             </button>
           </div>
+
+          {/* Billing Tip Popover */}
+          {showBillingTip && (
+            <div className={`absolute top-16 right-4 z-40 max-w-sm p-4 rounded-2xl backdrop-blur-2xl border shadow-2xl animate-fadeIn ${
+              isRose ? 'bg-[#1b0323]/95 border-[#ff2d75]/50' : 'bg-slate-950/95 border-slate-800'
+            }`}>
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span className="text-amber-400">💡</span> Aviso "For development purposes only"
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowBillingTip(false)}
+                  className="text-slate-400 hover:text-white text-xs cursor-pointer p-0.5"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed mb-2.5">
+                A Google inverte as cores e mostra esta marca de água quando a chave não tem uma conta de faturação associada na Google Cloud.
+              </p>
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[10px] text-slate-300 space-y-1 mb-3">
+                <p className="font-bold text-emerald-400">✓ A Google dá 200$ (USD) grátis TODOS os meses!</p>
+                <p className="text-slate-400">Para a bicicleta Merach em casa nunca terá custos. Basta associar para desbloquear imagens oficiais da Google.</p>
+              </div>
+              <a
+                href="https://console.cloud.google.com/billing"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all text-center"
+              >
+                <span>Ativar Conta Gratuita na Google</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
 
           {/* Cycling Cockpit Bar (Bottom Overlay) */}
           <div className="absolute bottom-4 left-4 right-4 z-20 pointer-events-none">
