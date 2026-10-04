@@ -99,7 +99,7 @@ export default function LiveDashboard({
           }`}
         >
           <Map className="w-3.5 h-3.5" />
-          <span>Percurso Real & Street View 360°</span>
+          <span>Percurso Real (Visão Satélite Frontal)</span>
         </button>
       </div>
 
