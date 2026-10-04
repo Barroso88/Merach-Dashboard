@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Merach-Dashboard</Name>
+  <Repository>ghcr.io/barroso88/merach-dashboard:latest</Repository>
+  <Registry>https://ghcr.io/barroso88/merach-dashboard</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Barroso88/Merach-Dashboard/issues</Support>
+  <Project>https://github.com/Barroso88/Merach-Dashboard</Project>
+  <Overview>Painel de Controlo Interativo Merach Cycling com Telemetria em Tempo Real, Percursos Reais e Vista Satelite Frontal 3D.</Overview>
+  <Category>HomeAutomation: Status:Tools:Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/Barroso88/Merach-Dashboard/main/public/cyclist.gif</Icon>
+  <Config Name="WebUI Port" Target="80" Default="8080" Mode="tcp" Description="Porta Web do Painel Merach" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+</Container>
