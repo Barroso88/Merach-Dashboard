@@ -64,7 +64,7 @@ export function resetWorkoutsToDefault() {
 }
 
 export const DEFAULT_SETTINGS = {
-  mode: 'simulation', // 'simulation' | 'homeassistant'
+  mode: 'homeassistant', // 'homeassistant' | 'simulation'
   weightKg: 75,
   haUrl: 'https://ha.barrosoportal.com',
   haToken: '',
@@ -94,9 +94,13 @@ export function getStoredSettings() {
       ? DEFAULT_SETTINGS.googleMapsApiKey
       : parsed.googleMapsApiKey;
 
+    // Automatically use homeassistant mode if a token or entities exist
+    const resolvedMode = parsed?.mode || (parsed?.haToken ? 'homeassistant' : DEFAULT_SETTINGS.mode);
+
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      mode: resolvedMode,
       googleMapsApiKey: key,
       haEntities: {
         ...DEFAULT_SETTINGS.haEntities,

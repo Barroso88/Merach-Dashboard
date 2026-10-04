@@ -146,10 +146,41 @@ export default function App() {
           return nextSec;
         });
       }, 1000);
+    } else if (workoutStatus === 'idle') {
+      // In IDLE/Standby: read live bike sensors in real-time so gauges move immediately!
+      if (settings.mode === 'homeassistant') {
+        timer = setInterval(async () => {
+          haServiceRef.current.fetchTelemetry()
+            .then((data) => {
+              setTelemetry({
+                cadence: data.cadence ?? 0,
+                speed: data.speed ?? 0,
+                power: data.power ?? 0,
+                resistance: data.resistance ?? 0,
+                heartRate: data.heartRate ?? 0
+              });
+            })
+            .catch(() => {});
+        }, 1000);
+      }
     } else if (workoutStatus === 'paused') {
       timer = setInterval(() => {
-        const coolTick = simulatorRef.current.nextTick(true);
-        setTelemetry(coolTick);
+        if (settings.mode === 'homeassistant') {
+          haServiceRef.current.fetchTelemetry()
+            .then((data) => {
+              setTelemetry({
+                cadence: data.cadence ?? 0,
+                speed: data.speed ?? 0,
+                power: data.power ?? 0,
+                resistance: data.resistance ?? 0,
+                heartRate: data.heartRate ?? 0
+              });
+            })
+            .catch(() => {});
+        } else {
+          const coolTick = simulatorRef.current.nextTick(true);
+          setTelemetry(coolTick);
+        }
       }, 1000);
     }
 
