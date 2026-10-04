@@ -15,24 +15,45 @@ import {
   Maximize2,
   Minimize2,
   Layers,
-  Sparkles
+  Sparkles,
+  Camera,
+  Columns,
+  Map as MapIcon,
+  Eye
 } from 'lucide-react';
 import {
   PRESET_ROUTES,
   parseGpxRoute,
   getRiderPositionAlongRoute
 } from '../services/routesData';
+import StreetViewPanoramaView from './StreetViewPanoramaView';
+import { getStoredSettings } from '../services/storageService';
 
 export default function RouteMap({
   currentDistanceKm = 0,
   speedKmH = 0,
   cadenceRpm = 0,
   themeConfig,
-  workoutStatus
+  workoutStatus,
+  googleMapsApiKey
 }) {
   const isRose = themeConfig?.id === 'rose';
   const primaryColor = isRose ? '#ff2d75' : '#38bdf8';
   const secondaryColor = isRose ? '#9400D3' : '#10b981';
+
+  // Google Maps API Key resolution
+  const effectiveApiKey = useMemo(() => {
+    return (
+      googleMapsApiKey ||
+      getStoredSettings()?.googleMapsApiKey ||
+      import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+      'AIzaSyDYRazINJY0D57G8x5eKrmIY1MyaOypK1o'
+    ).trim();
+  }, [googleMapsApiKey]);
+
+  // View Mode: 'streetview' | 'split' | 'map'
+  const [viewMode, setViewMode] = useState('streetview');
+  const [showPipMap, setShowPipMap] = useState(true);
 
   // Routes state
   const [routesList, setRoutesList] = useState(PRESET_ROUTES);
@@ -126,6 +147,19 @@ export default function RouteMap({
       mapInstanceRef.current.setZoom(zoomLevel);
     }
   }, [zoomLevel]);
+
+  // Invalidate Leaflet Map Size when switching viewMode or toggling PIP
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      const timer = setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+        if (riderPos && autoFollow) {
+          mapInstanceRef.current?.setView([riderPos.lat, riderPos.lng], zoomLevel, { animate: false });
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [viewMode, showPipMap, riderPos, autoFollow, zoomLevel]);
 
   // Switch Tile Style (Satellite / Street / Dark)
   useEffect(() => {
@@ -311,15 +345,80 @@ export default function RouteMap({
 
   return (
     <div className="w-full flex flex-col gap-4 animate-fadeIn">
-      {/* MAP VIEWPORT CONTAINER */}
-      <div className={`relative w-full h-[520px] md:h-[600px] rounded-3xl overflow-hidden border shadow-2xl transition-all ${
+      {/* MAP & STREET VIEW VIEWPORT CONTAINER */}
+      <div className={`relative w-full h-[540px] md:h-[620px] rounded-3xl overflow-hidden border shadow-2xl transition-all ${
         isRose ? 'border-[#ff2d75]/40 shadow-[0_0_35px_-5px_rgba(255,45,117,0.3)]' : 'border-sky-500/30 shadow-[0_0_35px_-5px_rgba(56,189,248,0.25)]'
       }`}>
-        {/* Clean Edge-to-Edge Map */}
-        <div 
-          ref={mapContainerRef} 
-          className="w-full h-full z-0" 
-        />
+        {/* VIEW AREA */}
+        <div className="relative w-full h-full flex flex-col md:flex-row overflow-hidden bg-slate-950">
+          {/* STREET VIEW VIEWPORT */}
+          {(viewMode === 'streetview' || viewMode === 'split') && (
+            <div className={
+              viewMode === 'split'
+                ? 'w-full md:w-1/2 h-1/2 md:h-full relative z-0'
+                : 'w-full h-full relative z-0'
+            }>
+              <StreetViewPanoramaView
+                lat={riderPos.lat}
+                lng={riderPos.lng}
+                bearing={riderPos.bearing}
+                gradient={riderPos.gradient}
+                speedKmH={speedKmH}
+                cadenceRpm={cadenceRpm}
+                currentDistanceKm={currentDistanceKm}
+                currentRoute={currentRoute}
+                isRose={isRose}
+                primaryColor={primaryColor}
+                apiKey={effectiveApiKey}
+                onSwitchToMap={() => setViewMode('map')}
+              />
+            </div>
+          )}
+
+          {/* LEAFLET MAP VIEWPORT (Full, Split, or PIP Floating Window) */}
+          <div
+            className={
+              viewMode === 'map'
+                ? 'w-full h-full z-0 relative'
+                : viewMode === 'split'
+                ? 'w-full md:w-1/2 h-1/2 md:h-full z-0 relative border-t md:border-t-0 md:border-l border-white/20'
+                : showPipMap
+                ? 'absolute bottom-32 right-4 w-64 h-48 rounded-2xl border-2 border-sky-400/40 shadow-2xl z-20 overflow-hidden bg-slate-950/95 flex flex-col'
+                : 'hidden'
+            }
+          >
+            {/* Header for PIP floating mini-map */}
+            {viewMode === 'streetview' && showPipMap && (
+              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-950/90 border-b border-white/15 text-[10px] font-bold text-white z-10">
+                <span className="flex items-center gap-1.5 text-sky-400">
+                  <MapIcon className="w-3 h-3" /> Traçado GPS
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('map')}
+                    title="Maximizar Mapa"
+                    className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPipMap(false)}
+                    title="Fechar Mini-Mapa"
+                    className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+            <div
+              ref={mapContainerRef}
+              className="w-full flex-1 min-h-0"
+            />
+          </div>
+        </div>
 
         {/* TOP HUD BAR: Route Title, Selector & GPX Upload */}
         <div className="absolute top-4 left-4 right-16 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
@@ -421,6 +520,57 @@ export default function RouteMap({
               <Upload className="w-3.5 h-3.5 text-amber-300" />
               <span className="hidden sm:inline">GPX</span>
             </button>
+
+            {/* View Mode Switcher: Street View | Dividido | Mapa */}
+            <div className="flex items-center p-1 rounded-2xl backdrop-blur-xl border border-white/15 bg-black/85 shadow-lg">
+              <button
+                type="button"
+                onClick={() => setViewMode('streetview')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'streetview'
+                    ? isRose
+                      ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
+                      : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-black shadow-md'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title="Visão Frontal Street View 360° Real da Estrada"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Street View</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('split')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'split'
+                    ? isRose
+                      ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
+                      : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-black shadow-md'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title="Ecrã Dividido: Street View + Mapa simultâneo"
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Dividido</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('map')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === 'map'
+                    ? isRose
+                      ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
+                      : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-black shadow-md'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title="Visão Aérea do Mapa Satélite / Ruas com Ciclista Animado"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Mapa</span>
+              </button>
+            </div>
           </div>
 
           {/* Quick HUD Pill: Gradient / Slope & Elevation */}
@@ -491,64 +641,83 @@ export default function RouteMap({
           </div>
         </div>
 
-        {/* MAP CONTROLS OVERLAY: Zoom, Auto-Follow & Tile Layer Switcher */}
+        {/* MAP CONTROLS OVERLAY: Zoom, Auto-Follow, Tile Layer Switcher & PIP */}
         <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
 
-          {/* Quick Zoom In & Zoom Out Buttons */}
-          <div className="flex flex-col rounded-2xl overflow-hidden border border-white/20 backdrop-blur-xl bg-black/75 shadow-lg">
+          {/* If in Street View mode and PIP is hidden, offer a quick button to show PIP mini-map */}
+          {viewMode === 'streetview' && !showPipMap && (
             <button
               type="button"
-              onClick={() => setZoomLevel(prev => Math.min(19, prev + 1))}
-              className="w-10 h-8 flex items-center justify-center text-white hover:bg-white/20 transition-all font-black text-sm cursor-pointer"
-              title="Aproximar Zoom (Mais detalhe)"
+              onClick={() => setShowPipMap(true)}
+              className="px-2.5 h-10 rounded-2xl backdrop-blur-xl border border-sky-400/40 bg-black/80 hover:bg-black/95 text-sky-300 hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-lg"
+              title="Abrir Mini-Mapa GPS"
             >
-              +
+              <MapIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Mini-Mapa</span>
             </button>
-            <div className="h-[1px] bg-white/10" />
-            <button
-              type="button"
-              onClick={() => setZoomLevel(prev => Math.max(13, prev - 1))}
-              className="w-10 h-8 flex items-center justify-center text-white hover:bg-white/20 transition-all font-black text-sm cursor-pointer"
-              title="Afastar Zoom"
-            >
-              −
-            </button>
-          </div>
+          )}
+
+          {/* Quick Zoom In & Zoom Out Buttons (active for map and PIP) */}
+          {(viewMode !== 'streetview' || showPipMap) && (
+            <div className="flex flex-col rounded-2xl overflow-hidden border border-white/20 backdrop-blur-xl bg-black/75 shadow-lg">
+              <button
+                type="button"
+                onClick={() => setZoomLevel(prev => Math.min(19, prev + 1))}
+                className="w-10 h-8 flex items-center justify-center text-white hover:bg-white/20 transition-all font-black text-sm cursor-pointer"
+                title="Aproximar Zoom (Mais detalhe)"
+              >
+                +
+              </button>
+              <div className="h-[1px] bg-white/10" />
+              <button
+                type="button"
+                onClick={() => setZoomLevel(prev => Math.max(13, prev - 1))}
+                className="w-10 h-8 flex items-center justify-center text-white hover:bg-white/20 transition-all font-black text-sm cursor-pointer"
+                title="Afastar Zoom"
+              >
+                −
+              </button>
+            </div>
+          )}
 
           {/* Auto-Follow Toggle */}
-          <button
-            type="button"
-            onClick={() => setAutoFollow(!autoFollow)}
-            className={`w-10 h-10 rounded-2xl backdrop-blur-xl border flex items-center justify-center transition-all cursor-pointer shadow-lg ${
-              autoFollow
-                ? isRose
-                  ? 'bg-[#ff2d75] border-[#ff2d75] text-white shadow-[#ff2d75]/50'
-                  : 'bg-sky-500 border-sky-400 text-slate-950 shadow-sky-500/40'
-                : 'bg-black/70 border-white/20 text-slate-400 hover:text-white'
-            }`}
-            title={autoFollow ? 'Câmara a seguir o ciclista (Ativo)' : 'Câmara livre'}
-          >
-            <Compass className={`w-5 h-5 ${autoFollow ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
-          </button>
+          {(viewMode !== 'streetview' || showPipMap) && (
+            <button
+              type="button"
+              onClick={() => setAutoFollow(!autoFollow)}
+              className={`w-10 h-10 rounded-2xl backdrop-blur-xl border flex items-center justify-center transition-all cursor-pointer shadow-lg ${
+                autoFollow
+                  ? isRose
+                    ? 'bg-[#ff2d75] border-[#ff2d75] text-white shadow-[#ff2d75]/50'
+                    : 'bg-sky-500 border-sky-400 text-slate-950 shadow-sky-500/40'
+                  : 'bg-black/70 border-white/20 text-slate-400 hover:text-white'
+              }`}
+              title={autoFollow ? 'Câmara a seguir o ciclista (Ativo)' : 'Câmara livre'}
+            >
+              <Compass className={`w-5 h-5 ${autoFollow ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
+            </button>
+          )}
 
           {/* Map Layer Mode Switcher: Satélite vs Ruas vs Modo Escuro */}
-          <button
-            type="button"
-            onClick={() => {
-              setMapStyle(prev => {
-                if (prev === 'satellite') return 'street';
-                if (prev === 'street') return 'dark';
-                return 'satellite';
-              });
-            }}
-            className="px-2.5 h-10 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/75 hover:bg-black/90 flex items-center gap-2 text-slate-200 hover:text-white transition-all cursor-pointer shadow-lg"
-            title="Mudar estilo de mapa (Satélite Real, Ruas ou Modo Escuro)"
-          >
-            <Layers className="w-4 h-4 text-sky-400" />
-            <span className="text-[10px] font-bold hidden sm:inline">
-              {mapStyle === 'satellite' ? '🛰️ Satélite' : mapStyle === 'street' ? '🗺️ Ruas' : '🌑 Escuro'}
-            </span>
-          </button>
+          {(viewMode !== 'streetview' || showPipMap) && (
+            <button
+              type="button"
+              onClick={() => {
+                setMapStyle(prev => {
+                  if (prev === 'satellite') return 'street';
+                  if (prev === 'street') return 'dark';
+                  return 'satellite';
+                });
+              }}
+              className="px-2.5 h-10 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/75 hover:bg-black/90 flex items-center gap-2 text-slate-200 hover:text-white transition-all cursor-pointer shadow-lg"
+              title="Mudar estilo de mapa (Satélite Real, Ruas ou Modo Escuro)"
+            >
+              <Layers className="w-4 h-4 text-sky-400" />
+              <span className="text-[10px] font-bold hidden sm:inline">
+                {mapStyle === 'satellite' ? '🛰️ Satélite' : mapStyle === 'street' ? '🗺️ Ruas' : '🌑 Escuro'}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

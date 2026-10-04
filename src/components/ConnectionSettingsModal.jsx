@@ -19,7 +19,9 @@ import {
   Gauge,
   Heart,
   Flame,
-  Milestone
+  Milestone,
+  MapPin,
+  Camera
 } from 'lucide-react';
 import { DEFAULT_SETTINGS } from '../services/storageService';
 
@@ -798,6 +800,49 @@ export default function ConnectionSettingsModal({
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Google Maps / Street View API Key Configuration */}
+          <div className={`p-4 rounded-2xl border space-y-3 ${
+            isRose ? 'bg-[#290534]/50 border-[#ff2d75]/30' : 'bg-slate-900/50 border-slate-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Camera className={`w-4 h-4 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Google Street View 360° (Visão Frontal Real)
+                </span>
+              </div>
+              {formData.googleMapsApiKey ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Configurada
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Opcional
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold mb-1 text-slate-300">
+                Chave Google Maps API (API Key):
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={formData.googleMapsApiKey || ''}
+                  onChange={(e) => setFormData({ ...formData, googleMapsApiKey: e.target.value })}
+                  placeholder="AIzaSy..."
+                  className={`w-full rounded-xl px-3 py-2 font-mono text-xs border ${
+                    themeConfig?.modalInputClass || 'bg-slate-900 border-slate-800 text-slate-200'
+                  }`}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                Utilizada para renderizar a visão frontal 360° em tempo real nas estradas. Certifique-se de que a API <strong>"Maps JavaScript API"</strong> está ativada na sua Google Cloud Console.
+              </p>
             </div>
           </div>
 

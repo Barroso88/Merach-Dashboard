@@ -163,6 +163,7 @@ export const DEFAULT_SETTINGS = {
   haToken: '',
   cfClientId: '',
   cfClientSecret: '',
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDYRazINJY0D57G8x5eKrmIY1MyaOypK1o',
   haEntities: {
     cadence: 'sensor.merach_bike_cadence',
     speed: 'sensor.merach_bike_speed',

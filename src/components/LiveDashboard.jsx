@@ -99,7 +99,7 @@ export default function LiveDashboard({
           }`}
         >
           <Map className="w-3.5 h-3.5" />
-          <span>Percurso Real & GPS (OpenStreetMap)</span>
+          <span>Percurso Real & Street View 360°</span>
         </button>
       </div>
 
@@ -111,6 +111,7 @@ export default function LiveDashboard({
             cadenceRpm={telemetry.cadence}
             themeConfig={themeConfig}
             workoutStatus={workoutStatus}
+            googleMapsApiKey={settings?.googleMapsApiKey}
           />
         </div>
       ) : (
