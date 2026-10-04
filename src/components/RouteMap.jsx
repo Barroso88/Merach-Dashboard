@@ -219,28 +219,32 @@ export default function RouteMap({
       shadowBlur: 10
     }).addTo(map);
 
-    // 2. Dynamic Rider Marker
+    // 2. Dynamic Rider Marker with Animated Cyclist Icon
     const bearing = riderPos.bearing || 0;
     const isPedaling = speedKmH > 1;
 
     const riderIcon = L.divIcon({
       className: 'custom-rider-marker',
       html: `
-        <div style="position: relative; width: 44px; height: 44px; display: flex; items-center; justify-content: center;">
+        <div style="position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;">
           <!-- Pulsing halo when pedaling -->
-          <div style="position: absolute; inset: 0; border-radius: 50%; background: ${primaryColor}; opacity: ${isPedaling ? '0.4' : '0.15'}; animation: ${isPedaling ? 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' : 'none'};"></div>
+          <div style="position: absolute; width: 50px; height: 50px; border-radius: 50%; background: ${primaryColor}; opacity: ${isPedaling ? '0.4' : '0.15'}; animation: ${isPedaling ? 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' : 'none'};"></div>
           
           <!-- Outer circular badge with heading indicator -->
-          <div style="position: relative; width: 38px; height: 38px; border-radius: 50%; background: #090d16; border: 2.5px solid ${primaryColor}; box-shadow: 0 0 16px ${primaryColor}99; display: flex; align-items: center; justify-content: center; transform: rotate(${bearing}deg); transition: transform 0.4s ease;">
+          <div style="position: relative; width: 48px; height: 48px; border-radius: 50%; background: rgba(8, 12, 20, 0.92); border: 2.5px solid ${primaryColor}; box-shadow: 0 0 20px ${primaryColor}bb; display: flex; align-items: center; justify-content: center;">
             <!-- Heading Direction Needle -->
-            <div style="position: absolute; top: -6px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid ${primaryColor};"></div>
-            <!-- Bike Icon -->
-            <span style="font-size: 18px; transform: rotate(-${bearing}deg);">🚴</span>
+            <div style="position: absolute; top: -7px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid ${primaryColor}; transform: rotate(${bearing}deg); transform-origin: 50% 31px;"></div>
+            <!-- Animated Cyclist GIF -->
+            <img 
+              src="/cyclist.gif" 
+              alt="Ciclista a pedalar" 
+              style="width: 38px; height: 38px; object-fit: contain; mix-blend-mode: screen; filter: drop-shadow(0 0 6px ${primaryColor}); transform: ${bearing > 90 && bearing < 270 ? 'scaleX(-1)' : 'scaleX(1)'};" 
+            />
           </div>
         </div>
       `,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22]
+      iconSize: [64, 64],
+      iconAnchor: [32, 32]
     });
 
     if (!riderMarkerRef.current) {
