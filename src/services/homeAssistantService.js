@@ -50,9 +50,13 @@ export class HomeAssistantService {
         headers,
         signal: AbortSignal.timeout(4000)
       });
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('text/html')) {
+        throw new Error('O endpoint retornou uma página HTML em vez de dados JSON da API.');
+      }
       return res;
     } catch (directErr) {
-      const isCorsOrNetwork = directErr.name === 'TypeError' || directErr.message?.includes('Failed to fetch');
+      const isCorsOrNetwork = directErr.name === 'TypeError' || directErr.message?.includes('Failed to fetch') || directErr.message?.includes('HTML');
       if (isCorsOrNetwork) {
         try {
           const proxyUrl = `/ha-proxy?target=${encodeURIComponent(directUrl)}`;
@@ -61,6 +65,10 @@ export class HomeAssistantService {
             headers,
             signal: AbortSignal.timeout(8000)
           });
+          const proxyCt = proxyRes.headers.get('content-type') || '';
+          if (proxyCt.includes('text/html')) {
+            throw directErr;
+          }
           return proxyRes;
         } catch {
           throw directErr;
@@ -80,8 +88,17 @@ export class HomeAssistantService {
 
     try {
       const response = await this.request('/api/');
+      const ct = response.headers.get('content-type') || '';
 
       if (response.ok) {
+        if (!ct.includes('application/json')) {
+          this.isConnected = false;
+          return {
+            success: false,
+            message: `O endereço ${this.url} respondeu com página Web (HTML) em vez da API JSON. Verifique o IP e porta do Home Assistant.`
+          };
+        }
+
         this.isConnected = true;
         this.lastError = null;
 
@@ -157,6 +174,11 @@ export class HomeAssistantService {
 
       if (!response.ok) {
         throw new Error(`Erro HTTP ${response.status} ao consultar entidades.`);
+      }
+
+      const ct = response.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        throw new Error(`O Home Assistant retornou uma página Web em vez de dados JSON. Verifique o endereço IP do Home Assistant.`);
       }
 
       const states = await response.json();
