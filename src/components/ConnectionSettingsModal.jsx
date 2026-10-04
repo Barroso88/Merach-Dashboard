@@ -21,7 +21,8 @@ import {
   Flame,
   Milestone,
   MapPin,
-  Camera
+  Camera,
+  Database
 } from 'lucide-react';
 import { DEFAULT_SETTINGS } from '../services/storageService';
 
@@ -846,23 +847,51 @@ export default function ConnectionSettingsModal({
             </div>
           </div>
 
+          {/* Base de Dados / Armazenamento (PostgreSQL Unraid) */}
+          <div className={`p-4 rounded-2xl border space-y-3 ${
+            isRose ? 'bg-[#3b0849]/30 border-[#ff2d75]/30' : 'bg-slate-900/60 border-slate-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className={`w-4 h-4 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Base de Dados (Unraid)
+                </span>
+              </div>
+              {settings?.postgresConnected ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> PostgreSQL Ativo
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+                  Ficheiro Local (/app/data)
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {settings?.postgresConnected
+                ? 'Os seus treinos, rotas e definições estão a ser guardados com persistência na base de dados PostgreSQL no Unraid.'
+                : 'Para ligar a base de dados PostgreSQL, adicione a variável DATABASE_URL (ex: postgresql://user:pass@192.168.1.xxx:5432/merach) ou PG_HOST nas definições do container no Unraid.'}
+            </p>
+          </div>
+
           {/* Reset Demo Data Button */}
           <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500">
-            <span className={isRose ? 'text-pink-200/70' : 'text-slate-500'}>Desejas repor os dados de exemplo do histórico?</span>
+            <span className={isRose ? 'text-pink-200/70' : 'text-slate-500'}>Histórico de treinos gravado no servidor</span>
             <button
               type="button"
               onClick={() => {
-                if (window.confirm('Isto irá repor as sessões de treino de demonstração. Continuar?')) {
+                if (window.confirm('Tem a certeza que deseja apagar todo o histórico de treinos guardado? Esta ação não pode ser desfeita.')) {
                   onResetSampleData();
-                  alert('Dados de demonstração repostos com sucesso!');
+                  alert('Histórico de treinos limpo com sucesso!');
                 }
               }}
-              className={`flex items-center gap-1 underline cursor-pointer ${
-                isRose ? 'text-pink-300 hover:text-white' : 'text-slate-400 hover:text-white'
+              className={`flex items-center gap-1 cursor-pointer transition-colors ${
+                isRose ? 'text-rose-400 hover:text-rose-300' : 'text-rose-400 hover:text-rose-300'
               }`}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Repor Treinos de Demonstração
+              Limpar Todo o Histórico de Treinos
             </button>
           </div>
         </div>

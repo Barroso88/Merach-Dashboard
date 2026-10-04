@@ -7,14 +7,19 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Production Stage: Ultra-lightweight Node.js 22 (Serves SPA + /ha-proxy CORS proxy + Central Settings/Workouts Sync)
+# Production Stage: Node.js 22 (Serves SPA + /ha-proxy CORS proxy + PostgreSQL/Central Sync)
 FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy built frontend and production server
+# Copy built frontend
 COPY --from=builder /app/dist ./dist
-COPY server.js package.json ./
+
+# Install runtime dependencies for server (pg, etc.)
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY server.js ./
 
 # Create persistent storage directory
 RUN mkdir -p /app/data
