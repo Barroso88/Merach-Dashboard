@@ -415,7 +415,7 @@ export default function RouteMap({
               </div>
               <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                 <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-sans">Distância Treino</span>
-                <span className="text-base font-black text-white">{currentDistanceKm} <span className="text-[10px] text-slate-400">km</span></span>
+                <span className="text-base font-black text-white">{Number(currentDistanceKm || 0).toFixed(2)} <span className="text-[10px] text-slate-400">km</span></span>
               </div>
               <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                 <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-sans">Volta / Lap</span>

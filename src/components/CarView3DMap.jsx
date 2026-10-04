@@ -271,13 +271,13 @@ export default function CarView3DMap({
     const targetBearing = isFrontalView ? (riderPos.bearing || 0) : 0;
     const targetPitch = isFrontalView ? 62 : 0;
 
-    // Smooth camera ease to rider position
+    // Smooth camera ease to rider position (900ms duration glides seamlessly across 1s tick interval)
     map.easeTo({
       center: [riderPos.lng, riderPos.lat],
       bearing: targetBearing,
       pitch: targetPitch,
       zoom: isFrontalView ? zoomLevel : Math.min(16, zoomLevel),
-      duration: 350,
+      duration: 900,
       easing: (t) => t
     });
 
@@ -295,10 +295,14 @@ export default function CarView3DMap({
 
     // Update covered track GeoJSON
     const coveredKm = currentDistanceKm % currentRoute.distanceKm;
+    const initialPoint = currentRoute.points[0];
     const coveredPoints = currentRoute.points
       .filter(p => p.distanceKm <= coveredKm)
       .map(p => [p.lng, p.lat]);
     coveredPoints.push([riderPos.lng, riderPos.lat]);
+    if (coveredPoints.length < 2) {
+      coveredPoints.unshift([initialPoint.lng, initialPoint.lat]);
+    }
 
     const source = map.getSource('route-covered');
     if (source) {

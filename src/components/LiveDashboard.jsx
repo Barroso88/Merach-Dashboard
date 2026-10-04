@@ -214,7 +214,7 @@ export default function LiveDashboard({
                     className="text-3xl font-black font-mono tracking-tight text-white"
                     style={{ textShadow: `0 0 15px ${distanceColor}60` }}
                   >
-                    {sessionStats.distanceKm}
+                    {Number(sessionStats.distanceKm || 0).toFixed(2)}
                   </span>
                   <span className="text-xs font-bold font-mono" style={{ color: distanceColor }}>km</span>
                 </div>
@@ -241,7 +241,7 @@ export default function LiveDashboard({
                       textShadow: `0 0 15px ${caloriesColor}60` 
                     }}
                   >
-                    {sessionStats.caloriesKcal}
+                    {Math.round(sessionStats.caloriesKcal || 0)}
                   </span>
                   <span className="text-xs font-bold font-mono" style={{ color: caloriesColor }}>kcal</span>
                 </div>

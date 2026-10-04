@@ -152,13 +152,20 @@ export default function App() {
         timer = setInterval(async () => {
           haServiceRef.current.fetchTelemetry()
             .then((data) => {
+              const liveCadence = data.cadence ?? 0;
+              const liveSpeed = data.speed ?? 0;
               setTelemetry({
-                cadence: data.cadence ?? 0,
-                speed: data.speed ?? 0,
+                cadence: liveCadence,
+                speed: liveSpeed,
                 power: data.power ?? 0,
                 resistance: data.resistance ?? 0,
                 heartRate: data.heartRate ?? 0
               });
+
+              // Automatically start workout session when user starts pedaling!
+              if (liveCadence > 15 || liveSpeed > 4) {
+                handleStartWorkout();
+              }
             })
             .catch(() => {});
         }, 1000);
@@ -239,15 +246,15 @@ export default function App() {
       const cadenceRpm = Number(tick.cadence) || 0;
       const calPerSecond = ((speedKmH * 0.22) + (cadenceRpm * 0.05)) / 60;
       
-      // Session distance strictly accumulates from start of workout (0.00 km)
-      const newDistance = Number((prev.distanceKm + distIncrement).toFixed(2));
-      const newCalories = Math.round(prev.caloriesKcal + calPerSecond);
+      // Session distance accumulates with continuous float precision (no premature truncation!)
+      const newDistance = prev.distanceKm + distIncrement;
+      const newCalories = prev.caloriesKcal + calPerSecond;
 
       const count = prev.samplesCount + 1;
-      const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + tick.speed) / count).toFixed(1));
-      const newMaxSpeed = Math.max(prev.maxSpeed, tick.speed);
-      const newAvgCadence = Math.round(((prev.avgCadence * prev.samplesCount) + tick.cadence) / count);
-      const newMaxCadence = Math.max(prev.maxCadence, tick.cadence);
+      const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + speedKmH) / count).toFixed(1));
+      const newMaxSpeed = Math.max(prev.maxSpeed, speedKmH);
+      const newAvgCadence = Math.round(((prev.avgCadence * prev.samplesCount) + cadenceRpm) / count);
+      const newMaxCadence = Math.max(prev.maxCadence, cadenceRpm);
 
       return {
         distanceKm: newDistance,
@@ -287,8 +294,8 @@ export default function App() {
       title: 'Treino Merach Bike',
       date: new Date().toISOString(),
       durationSeconds: elapsedSeconds,
-      distanceKm: sessionStats.distanceKm,
-      caloriesKcal: sessionStats.caloriesKcal,
+      distanceKm: Number((sessionStats.distanceKm || 0).toFixed(2)),
+      caloriesKcal: Math.round(sessionStats.caloriesKcal || 0),
       avgSpeed: sessionStats.avgSpeed,
       maxSpeed: sessionStats.maxSpeed,
       avgCadence: sessionStats.avgCadence,
