@@ -231,17 +231,17 @@ export default function App() {
 
     // Update cumulative metrics according to official indoor bike formula
     setSessionStats((prev) => {
-      const distIncrement = tick.speed / 3600; // km per second
-      // Official calorie formula based on speed and cadence
-      const calPerSecond = ((tick.speed * 0.22) + (tick.cadence * 0.05)) / 60;
+      // Physical distance integration: (speed km/h) / 3600 = km pedaled per second
+      const speedKmH = Number(tick.speed) || 0;
+      const distIncrement = speedKmH / 3600;
       
-      const newDistance = tick.distance !== null && tick.distance !== undefined && !isNaN(tick.distance)
-        ? Number(Number(tick.distance).toFixed(2))
-        : Number((prev.distanceKm + distIncrement).toFixed(2));
-
-      const newCalories = tick.calories !== null && tick.calories !== undefined && !isNaN(tick.calories)
-        ? Math.round(Number(tick.calories))
-        : Math.round(prev.caloriesKcal + calPerSecond);
+      // Calorie expenditure formula based on speed and cadence
+      const cadenceRpm = Number(tick.cadence) || 0;
+      const calPerSecond = ((speedKmH * 0.22) + (cadenceRpm * 0.05)) / 60;
+      
+      // Session distance strictly accumulates from start of workout (0.00 km)
+      const newDistance = Number((prev.distanceKm + distIncrement).toFixed(2));
+      const newCalories = Math.round(prev.caloriesKcal + calPerSecond);
 
       const count = prev.samplesCount + 1;
       const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + tick.speed) / count).toFixed(1));

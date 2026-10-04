@@ -304,13 +304,15 @@ export class HomeAssistantService {
           if (!res.ok) return null;
           const json = await res.json();
           const val = parseFloat(json.state);
-          return isNaN(val) ? 0 : val;
+          if (isNaN(val)) return null;
+          const unit = (json.attributes?.unit_of_measurement || '').toLowerCase().trim();
+          return { val, unit };
         } catch {
           return null;
         }
       };
 
-      const [cadence, speed, power, resistance, heartRate, distance, calories] = await Promise.all([
+      const [cadenceRaw, speedRaw, powerRaw, resistanceRaw, heartRateRaw, distanceRaw, caloriesRaw] = await Promise.all([
         fetchEntity(this.entities.cadence),
         fetchEntity(this.entities.speed),
         fetchEntity(this.entities.power),
@@ -320,14 +322,33 @@ export class HomeAssistantService {
         fetchEntity(this.entities.calories)
       ]);
 
+      // Normalize speed to km/h
+      let speed = 0;
+      if (speedRaw !== null) {
+        let s = speedRaw.val;
+        if (speedRaw.unit === 'm/s') s *= 3.6;
+        else if (speedRaw.unit === 'mph') s *= 1.60934;
+        speed = Math.max(0, Math.min(99, Number(s.toFixed(1))));
+      }
+
+      // Normalize distance to km (if sensor reports in meters e.g. from ESPHome BLE)
+      let distance = null;
+      if (distanceRaw !== null) {
+        let d = distanceRaw.val;
+        if (['m', 'meter', 'meters', 'metro', 'metros'].includes(distanceRaw.unit) || (d > 50 && !distanceRaw.unit)) {
+          d = d / 1000;
+        }
+        distance = Math.max(0, Number(d.toFixed(3)));
+      }
+
       return {
-        cadence: cadence ?? 0,
-        speed: speed ?? 0,
-        power: power ?? 0,
-        resistance: resistance ?? 0,
-        heartRate: heartRate ?? 0,
-        distance: distance !== null && !isNaN(distance) ? distance : null,
-        calories: calories !== null && !isNaN(calories) ? calories : null
+        cadence: cadenceRaw ? Math.round(cadenceRaw.val) : 0,
+        speed,
+        power: powerRaw ? Math.round(powerRaw.val) : 0,
+        resistance: resistanceRaw ? Math.round(resistanceRaw.val) : 0,
+        heartRate: heartRateRaw ? Math.round(heartRateRaw.val) : 0,
+        distance,
+        calories: caloriesRaw ? Math.round(caloriesRaw.val) : null
       };
     } catch (err) {
       console.warn('Failed to fetch telemetry from Home Assistant:', err);
