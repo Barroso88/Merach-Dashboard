@@ -51,8 +51,8 @@ export default function RouteMap({
     ).trim();
   }, [googleMapsApiKey]);
 
-  // View Mode: 'streetview' | 'split' | 'map'
-  const [viewMode, setViewMode] = useState('streetview');
+  // View Mode: 'map' (default) | 'streetview' | 'split'
+  const [viewMode, setViewMode] = useState('map');
   const [showPipMap, setShowPipMap] = useState(true);
 
   // Routes state

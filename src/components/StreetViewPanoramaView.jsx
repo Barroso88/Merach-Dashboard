@@ -31,6 +31,7 @@ export default function StreetViewPanoramaView({
   const panoramaRef = useRef(null);
   const svServiceRef = useRef(null);
   const lastPositionRef = useRef({ lat: 0, lng: 0 });
+  const currentPanoIdRef = useRef(null);
   const isUpdatingRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
@@ -157,34 +158,28 @@ export default function StreetViewPanoramaView({
       lng
     );
 
-    // Only query Street View if moved more than 7 meters or first load
-    if (distMoved >= 7 || lastPositionRef.current.lat === 0) {
+    // Only query Street View if moved more than 20 meters or first load
+    if (distMoved >= 20 || lastPositionRef.current.lat === 0) {
       if (isUpdatingRef.current) return;
       isUpdatingRef.current = true;
 
       svService.getPanorama(
         {
           location: { lat, lng },
-          radius: 80, // 80 meters search radius
+          radius: 90, // 90 meters search radius
           source: window.google.maps.StreetViewSource.OUTDOOR,
           preference: window.google.maps.StreetViewPreference.NEAREST
         },
         (data, status) => {
           isUpdatingRef.current = false;
           if (status === window.google.maps.StreetViewStatus.OK && data?.location?.pano) {
-            panorama.setPano(data.location.pano);
+            // ONLY reload if it is a truly different photo sphere
+            if (data.location.pano !== currentPanoIdRef.current) {
+              currentPanoIdRef.current = data.location.pano;
+              panorama.setPano(data.location.pano);
+            }
             lastPositionRef.current = { lat, lng };
 
-            if (autoHeading) {
-              panorama.setPov({
-                heading: bearing || 0,
-                pitch: targetPitch
-              });
-            }
-          } else {
-            // Fallback: try default panorama setPosition
-            panorama.setPosition({ lat, lng });
-            lastPositionRef.current = { lat, lng };
             if (autoHeading) {
               panorama.setPov({
                 heading: bearing || 0,
@@ -195,7 +190,7 @@ export default function StreetViewPanoramaView({
         }
       );
     } else if (autoHeading) {
-      // Just update heading smoothly if in the same spot but turning
+      // Just update heading smoothly without reloading any photo
       panorama.setPov({
         heading: bearing || 0,
         pitch: targetPitch
