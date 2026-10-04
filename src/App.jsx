@@ -41,6 +41,9 @@ export default function App() {
   // Navigation: 'live' or 'analytics'
   const [activeTab, setActiveTab] = useState('live');
 
+  // Cockpit view mode for live workout: 'gauges' | 'route'
+  const [dashboardMode, setDashboardMode] = useState('gauges');
+
   // Top Navbar auto-collapse for cockpit immersion during workouts
   const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(false);
 
@@ -467,6 +470,9 @@ export default function App() {
         <Navbar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          dashboardMode={dashboardMode}
+          onToggleDashboardMode={() => setDashboardMode(prev => prev === 'route' ? 'gauges' : 'route')}
+          onSetDashboardMode={setDashboardMode}
           mode={settings.mode}
           workoutStatus={workoutStatus}
           elapsedTimeFormatted={formatElapsedTimer(elapsedSeconds)}
@@ -500,6 +506,8 @@ export default function App() {
             onReset={handleResetWorkout}
             onSimulationPresetChange={handleSimulationPresetChange}
             simulationPreset={simulationPreset}
+            dashboardMode={dashboardMode}
+            setDashboardMode={setDashboardMode}
           />
         ) : (
           <AnalyticsView

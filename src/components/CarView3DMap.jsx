@@ -386,7 +386,7 @@ export default function CarView3DMap({
       {!loading && !error && (
         <>
           {/* Floating Zoom & Map Style Controls (Positioned safely on right margin, below the top HUD bar) */}
-          <div className="absolute top-20 right-4 z-20 flex flex-col items-end gap-2 pointer-events-auto">
+          <div className="absolute top-36 sm:top-40 right-4 z-20 flex flex-col items-end gap-2 pointer-events-auto">
             {/* Zoom In & Zoom Out */}
             <div className="flex flex-col rounded-2xl overflow-hidden border border-white/20 backdrop-blur-xl bg-black/85 shadow-xl">
               <button

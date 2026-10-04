@@ -7,12 +7,17 @@ import {
   Settings,
   LineChart,
   Palette,
-  ChevronUp
+  ChevronUp,
+  Gauge,
+  Map
 } from 'lucide-react';
 
 export default function Navbar({
   activeTab,
   setActiveTab,
+  dashboardMode = 'gauges',
+  onToggleDashboardMode,
+  onSetDashboardMode,
   mode,
   workoutStatus,
   elapsedTimeFormatted,
@@ -102,6 +107,45 @@ export default function Navbar({
             Estatísticas & Registos
           </button>
         </div>
+
+        {/* Cockpit Mode Switcher (Visible when in Live Workout tab on desktop, tablet, and mobile) */}
+        {activeTab === 'live' && (
+          <div className={`flex items-center gap-1 p-1 rounded-2xl border backdrop-blur-xl shadow-inner ${
+            isRose ? 'bg-[#290534]/90 border-[#ff2d75]/40' : 'bg-slate-900/90 border-slate-700/80'
+          }`}>
+            <button
+              type="button"
+              onClick={() => onSetDashboardMode ? onSetDashboardMode('gauges') : onToggleDashboardMode?.()}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dashboardMode === 'gauges'
+                  ? isRose
+                    ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
+                    : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-black shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Modo Manómetros e Telemetria"
+            >
+              <Gauge className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Manómetros</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onSetDashboardMode ? onSetDashboardMode('route') : onToggleDashboardMode?.()}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                dashboardMode === 'route'
+                  ? isRose
+                    ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
+                    : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-black shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Modo Percurso Real 3D / GPS"
+            >
+              <Map className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Percurso 3D</span>
+            </button>
+          </div>
+        )}
 
         {/* Right Actions: Theme Switcher, Connection Badge & Settings */}
         <div className="flex items-center gap-2.5">

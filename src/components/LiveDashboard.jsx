@@ -21,9 +21,13 @@ export default function LiveDashboard({
   onPause,
   onResume,
   onStop,
-  onReset
+  onReset,
+  dashboardMode: controlledMode,
+  setDashboardMode: setControlledMode
 }) {
-  const [dashboardMode, setDashboardMode] = useState('gauges'); // 'gauges' | 'route'
+  const [internalMode, setInternalMode] = useState('gauges'); // 'gauges' | 'route'
+  const dashboardMode = controlledMode !== undefined ? controlledMode : internalMode;
+  const setDashboardMode = setControlledMode !== undefined ? setControlledMode : setInternalMode;
 
   // Dynamic responsive gauge sizing (compact on tablets to avoid scrolling!)
   const [gaugeSize, setGaugeSize] = useState(() => {

@@ -235,8 +235,8 @@ export default function RouteMap({
           />
         </div>
 
-        {/* TOP HUD BAR: Route Title, Selector & GPX Upload */}
-        <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        {/* TOP HUD BAR: Route Title, Selector & GPX Upload (Positioned clearly below the top Navbar) */}
+        <div className="absolute top-[76px] sm:top-[82px] left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
           <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
             {/* Route Selector Dropdown Toggle */}
             <div className="relative">
