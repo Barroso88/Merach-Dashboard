@@ -3,6 +3,7 @@ import SportNeedleGauge from './SportNeedleGauge';
 import LiveChart from './LiveChart';
 import WorkoutControls from './WorkoutControls';
 import RouteMap from './RouteMap';
+import RouteErrorBoundary from './RouteErrorBoundary';
 import { Gauge, Map } from 'lucide-react';
 
 export default function LiveDashboard({
@@ -105,14 +106,16 @@ export default function LiveDashboard({
 
       {dashboardMode === 'route' ? (
         <div className="w-full">
-          <RouteMap
-            currentDistanceKm={sessionStats.distanceKm}
-            speedKmH={telemetry.speed}
-            cadenceRpm={telemetry.cadence}
-            themeConfig={themeConfig}
-            workoutStatus={workoutStatus}
-            googleMapsApiKey={settings?.googleMapsApiKey}
-          />
+          <RouteErrorBoundary>
+            <RouteMap
+              currentDistanceKm={sessionStats.distanceKm}
+              speedKmH={telemetry.speed}
+              cadenceRpm={telemetry.cadence}
+              themeConfig={themeConfig}
+              workoutStatus={workoutStatus}
+              googleMapsApiKey={settings?.googleMapsApiKey}
+            />
+          </RouteErrorBoundary>
         </div>
       ) : (
         <>

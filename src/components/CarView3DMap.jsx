@@ -7,11 +7,13 @@ import {
   TrendingUp,
   TrendingDown,
   Mountain,
-  Navigation2
+  Navigation2,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { loadMapLibre } from '../services/maplibreLoader';
 
-const ESRI_SATELLITE_STYLE = {
+const UNIFIED_MAP_STYLE = {
   version: 8,
   sources: {
     'esri-satellite': {
@@ -22,22 +24,7 @@ const ESRI_SATELLITE_STYLE = {
       tileSize: 256,
       maxzoom: 19,
       attribution: '&copy; Esri World Imagery'
-    }
-  },
-  layers: [
-    {
-      id: 'esri-satellite-layer',
-      type: 'raster',
-      source: 'esri-satellite',
-      minzoom: 0,
-      maxzoom: 19
-    }
-  ]
-};
-
-const ESRI_STREET_STYLE = {
-  version: 8,
-  sources: {
+    },
     'esri-street': {
       type: 'raster',
       tiles: [
@@ -50,11 +37,20 @@ const ESRI_STREET_STYLE = {
   },
   layers: [
     {
+      id: 'esri-satellite-layer',
+      type: 'raster',
+      source: 'esri-satellite',
+      minzoom: 0,
+      maxzoom: 19,
+      layout: { visibility: 'visible' }
+    },
+    {
       id: 'esri-street-layer',
       type: 'raster',
       source: 'esri-street',
       minzoom: 0,
-      maxzoom: 19
+      maxzoom: 19,
+      layout: { visibility: 'none' }
     }
   ]
 };
@@ -76,6 +72,8 @@ export default function CarView3DMap({
   const finishMarkerRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [mapStyleType, setMapStyleType] = useState('satellite'); // 'satellite' | 'street'
   const [internalFrontalView, setInternalFrontalView] = useState(true);
   const isFrontalView = isFrontalViewProp !== undefined ? isFrontalViewProp : internalFrontalView;
@@ -97,6 +95,9 @@ export default function CarView3DMap({
 
     if (!containerRef.current || !currentRoute?.points?.length) return;
 
+    setLoading(true);
+    setError(null);
+
     const initMap = async () => {
       try {
         const maplibregl = await loadMapLibre();
@@ -107,7 +108,7 @@ export default function CarView3DMap({
 
         const map = new maplibregl.Map({
           container: containerRef.current,
-          style: mapStyleType === 'street' ? ESRI_STREET_STYLE : ESRI_SATELLITE_STYLE,
+          style: UNIFIED_MAP_STYLE,
           center: [initialPoint.lng, initialPoint.lat],
           zoom: 17.5,
           pitch: isFrontalView ? 62 : 0, // 62° 3D forward tilt like a car windshield!
@@ -116,8 +117,19 @@ export default function CarView3DMap({
           maxPitch: 75
         });
 
+        map.on('error', (e) => {
+          // Log non-fatal tile errors without breaking map
+          console.warn('MapLibre event:', e?.error?.message || e);
+        });
+
         map.on('load', () => {
           if (isCancelled) return;
+
+          map.resize();
+
+          // Apply current mapStyleType
+          map.setLayoutProperty('esri-satellite-layer', 'visibility', mapStyleType === 'satellite' ? 'visible' : 'none');
+          map.setLayoutProperty('esri-street-layer', 'visibility', mapStyleType === 'street' ? 'visible' : 'none');
 
           // 1. Add Full Route Line GeoJSON
           map.addSource('route-full', {
@@ -212,10 +224,7 @@ export default function CarView3DMap({
           cyclistEl.className = 'cyclist-marker-root';
           cyclistEl.innerHTML = `
             <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%);">
-              <!-- Pulsing Halo -->
               <div id="cyclist-halo" style="position: absolute; width: 56px; height: 56px; border-radius: 50%; background: ${primaryColor}; opacity: 0.3; transition: all 0.3s;"></div>
-              
-              <!-- Circular Cockpit Frame -->
               <div style="position: relative; width: 50px; height: 50px; border-radius: 50%; background: rgba(8, 12, 20, 0.95); border: 2.5px solid ${primaryColor}; box-shadow: 0 0 25px ${primaryColor}cc; display: flex; align-items: center; justify-content: center;">
                 <img 
                   src="/cyclist.gif" 
@@ -236,7 +245,10 @@ export default function CarView3DMap({
 
       } catch (err) {
         console.error('Error initializing MapLibre 3D map:', err);
-        setLoading(false);
+        if (!isCancelled) {
+          setError(err.message || 'Erro ao carregar o motor de navegação 3D.');
+          setLoading(false);
+        }
       }
     };
 
@@ -249,7 +261,7 @@ export default function CarView3DMap({
         mapRef.current = null;
       }
     };
-  }, [currentRoute, isRose]);
+  }, [currentRoute, isRose, retryKey]);
 
   // Update Map Position, Bearing (Heading), and Tilt smoothly
   useEffect(() => {
@@ -301,11 +313,16 @@ export default function CarView3DMap({
     }
   }, [riderPos, isFrontalView, currentDistanceKm, currentRoute, isPedaling, zoomLevel]);
 
-  // Toggle Map Style (Satellite vs Street)
+  // Toggle Map Style (Satellite vs Street) instantly
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    map.setStyle(mapStyleType === 'street' ? ESRI_STREET_STYLE : ESRI_SATELLITE_STYLE);
+    if (!map || !map.isStyleLoaded()) return;
+    try {
+      map.setLayoutProperty('esri-satellite-layer', 'visibility', mapStyleType === 'satellite' ? 'visible' : 'none');
+      map.setLayoutProperty('esri-street-layer', 'visibility', mapStyleType === 'street' ? 'visible' : 'none');
+    } catch {
+      // Ignore if layers are still initializing
+    }
   }, [mapStyleType]);
 
   return (
@@ -317,8 +334,27 @@ export default function CarView3DMap({
         style={{ minHeight: '100%', height: '100%', width: '100%' }}
       />
 
+      {/* Error Overlay */}
+      {error && (
+        <div className="absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h4 className="text-white font-bold text-sm">Não foi possível carregar a vista 3D</h4>
+          <p className="text-slate-400 text-xs max-w-sm">{error}</p>
+          <button
+            type="button"
+            onClick={() => setRetryKey(k => k + 1)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-2 hover:opacity-95 transition-all cursor-pointer shadow-lg mt-2"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Tentar Novamente</span>
+          </button>
+        </div>
+      )}
+
       {/* Loading Overlay */}
-      {loading && (
+      {loading && !error && (
         <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
           <div
             className="w-14 h-14 rounded-full border-4 border-t-transparent animate-spin mb-4"
@@ -330,7 +366,7 @@ export default function CarView3DMap({
       )}
 
       {/* 3D Cockpit HUD Overlays */}
-      {!loading && (
+      {!loading && !error && (
         <>
           {/* Compass & Mode Badge (Top Left, under HUD) */}
           <div className="absolute top-16 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">

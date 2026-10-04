@@ -1,27 +1,15 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useRef, useState, useMemo } from 'react';
 import {
-  MapPin,
   Navigation,
   Mountain,
   TrendingUp,
   TrendingDown,
   Flag,
   Upload,
-  Compass,
   Check,
   ChevronDown,
-  Maximize2,
-  Minimize2,
   Layers,
-  Sparkles,
-  Camera,
-  Columns,
-  Map as MapIcon,
-  Eye,
-  Car,
-  Navigation2
+  Car
 } from 'lucide-react';
 import {
   PRESET_ROUTES,
@@ -60,19 +48,7 @@ export default function RouteMap({
   const [routesList, setRoutesList] = useState(PRESET_ROUTES);
   const [selectedRouteId, setSelectedRouteId] = useState(PRESET_ROUTES[0].id);
   const [isRouteSelectorOpen, setIsRouteSelectorOpen] = useState(false);
-  const [autoFollow, setAutoFollow] = useState(true);
-  const [mapStyle, setMapStyle] = useState('satellite'); // Default to satellite for real roads
-  const [zoomLevel, setZoomLevel] = useState(17); // Close-up detail
-
   const fileInputRef = useRef(null);
-  const mapContainerRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const fullPolylineRef = useRef(null);
-  const coveredPolylineRef = useRef(null);
-  const riderMarkerRef = useRef(null);
-  const startMarkerRef = useRef(null);
-  const finishMarkerRef = useRef(null);
-  const tileLayerRef = useRef(null);
 
   // Active route
   const currentRoute = useMemo(() => {
@@ -83,229 +59,6 @@ export default function RouteMap({
   const riderPos = useMemo(() => {
     return getRiderPositionAlongRoute(currentRoute, currentDistanceKm);
   }, [currentRoute, currentDistanceKm]);
-
-  const getTileConfig = (style) => {
-    switch (style) {
-      case 'street':
-        return {
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-          maxZoom: 19,
-          attribution: '&copy; Esri World Street Map'
-        };
-      case 'dark':
-        return {
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-          maxZoom: 16,
-          attribution: '&copy; Esri Dark Canvas'
-        };
-      case 'satellite':
-      default:
-        return {
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          maxZoom: 19,
-          attribution: '&copy; Esri World Imagery'
-        };
-    }
-  };
-
-  // Initialize Map
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
-
-    if (!mapInstanceRef.current) {
-      const initialLat = currentRoute.points[0]?.lat || 38.6970;
-      const initialLng = currentRoute.points[0]?.lng || -9.4215;
-
-      const map = L.map(mapContainerRef.current, {
-        center: [initialLat, initialLng],
-        zoom: 18,
-        zoomControl: false,
-        attributionControl: false
-      });
-
-      // Free High Definition Tile Layer (No API Key Required, No Watermarks)
-      const tileCfg = getTileConfig(mapStyle);
-      const tileLayer = L.tileLayer(tileCfg.url, {
-        maxZoom: tileCfg.maxZoom,
-        attribution: tileCfg.attribution
-      }).addTo(map);
-
-      tileLayerRef.current = tileLayer;
-      mapInstanceRef.current = map;
-    }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
-
-  // Update zoom when zoomLevel changes
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setZoom(zoomLevel);
-    }
-  }, [zoomLevel]);
-
-  // Invalidate Leaflet Map Size when switching viewMode or toggling PIP
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      const resize = () => {
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.invalidateSize();
-          if (riderPos && autoFollow) {
-            mapInstanceRef.current.setView([riderPos.lat, riderPos.lng], zoomLevel, { animate: false });
-          }
-        }
-      };
-
-      resize();
-      const t1 = setTimeout(resize, 50);
-      const t2 = setTimeout(resize, 180);
-      const t3 = setTimeout(resize, 450);
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
-    }
-  }, [viewMode, showPipMap, riderPos, autoFollow, zoomLevel]);
-
-  // Switch Tile Style (Satellite / Street / Dark)
-  useEffect(() => {
-    if (!mapInstanceRef.current || !tileLayerRef.current) return;
-    mapInstanceRef.current.removeLayer(tileLayerRef.current);
-
-    const tileCfg = getTileConfig(mapStyle);
-    tileLayerRef.current = L.tileLayer(tileCfg.url, {
-      maxZoom: tileCfg.maxZoom,
-      attribution: tileCfg.attribution
-    }).addTo(mapInstanceRef.current);
-  }, [mapStyle]);
-
-  // Draw or Update Route Polylines and Markers
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !currentRoute || !currentRoute.points.length) return;
-
-    const latLngs = currentRoute.points.map(p => [p.lat, p.lng]);
-
-    // 1. Full Route Polyline (Glow / Inactive)
-    if (fullPolylineRef.current) {
-      map.removeLayer(fullPolylineRef.current);
-    }
-    fullPolylineRef.current = L.polyline(latLngs, {
-      color: isRose ? '#4a1538' : '#1e293b',
-      weight: 6,
-      opacity: 0.9,
-      lineCap: 'round',
-      lineJoin: 'round',
-      dashArray: '3, 6'
-    }).addTo(map);
-
-    // 2. Start Marker
-    if (startMarkerRef.current) map.removeLayer(startMarkerRef.current);
-    const startPoint = latLngs[0];
-    const startIcon = L.divIcon({
-      className: 'custom-start-marker',
-      html: `
-        <div style="background: #10b981; color: black; font-weight: 900; font-size: 10px; padding: 4px 8px; border-radius: 9999px; box-shadow: 0 0 12px rgba(16,185,129,0.8); border: 2px solid white; display: flex; align-items: center; gap: 3px;">
-          <span>🚦</span> Partida
-        </div>
-      `,
-      iconSize: [60, 24],
-      iconAnchor: [30, 12]
-    });
-    startMarkerRef.current = L.marker(startPoint, { icon: startIcon }).addTo(map);
-
-    // 3. Finish Marker
-    if (finishMarkerRef.current) map.removeLayer(finishMarkerRef.current);
-    const finishPoint = latLngs[latLngs.length - 1];
-    const finishIcon = L.divIcon({
-      className: 'custom-finish-marker',
-      html: `
-        <div style="background: #f43f5e; color: white; font-weight: 900; font-size: 10px; padding: 4px 8px; border-radius: 9999px; box-shadow: 0 0 12px rgba(244,63,94,0.8); border: 2px solid white; display: flex; align-items: center; gap: 3px;">
-          <span>🏁</span> Meta (${currentRoute.distanceKm} km)
-        </div>
-      `,
-      iconSize: [80, 24],
-      iconAnchor: [40, 12]
-    });
-    finishMarkerRef.current = L.marker(finishPoint, { icon: finishIcon }).addTo(map);
-
-    // Fit map bounds to whole route on route change
-    map.fitBounds(fullPolylineRef.current.getBounds(), { padding: [50, 50] });
-
-  }, [currentRoute, isRose]);
-
-  // Update Rider Marker and Covered Track in Real-Time
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map || !riderPos || !currentRoute) return;
-
-    // 1. Covered Track Polyline
-    const coveredKm = currentDistanceKm % currentRoute.distanceKm;
-    const coveredPoints = currentRoute.points
-      .filter(p => p.distanceKm <= coveredKm)
-      .map(p => [p.lat, p.lng]);
-    coveredPoints.push([riderPos.lat, riderPos.lng]);
-
-    if (coveredPolylineRef.current) {
-      map.removeLayer(coveredPolylineRef.current);
-    }
-    coveredPolylineRef.current = L.polyline(coveredPoints, {
-      color: primaryColor,
-      weight: 6,
-      opacity: 0.95,
-      lineCap: 'round',
-      lineJoin: 'round',
-      shadowColor: primaryColor,
-      shadowBlur: 10
-    }).addTo(map);
-
-    // 2. Dynamic Rider Marker with Animated Cyclist Icon
-    const bearing = riderPos.bearing || 0;
-    const isPedaling = speedKmH > 1;
-
-    const riderIcon = L.divIcon({
-      className: 'custom-rider-marker',
-      html: `
-        <div style="position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;">
-          <!-- Pulsing halo when pedaling -->
-          <div style="position: absolute; width: 50px; height: 50px; border-radius: 50%; background: ${primaryColor}; opacity: ${isPedaling ? '0.4' : '0.15'}; animation: ${isPedaling ? 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' : 'none'};"></div>
-          
-          <!-- Outer circular badge with heading indicator -->
-          <div style="position: relative; width: 48px; height: 48px; border-radius: 50%; background: rgba(8, 12, 20, 0.92); border: 2.5px solid ${primaryColor}; box-shadow: 0 0 20px ${primaryColor}bb; display: flex; align-items: center; justify-content: center;">
-            <!-- Heading Direction Needle -->
-            <div style="position: absolute; top: -7px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid ${primaryColor}; transform: rotate(${bearing}deg); transform-origin: 50% 31px;"></div>
-            <!-- Animated Cyclist GIF -->
-            <img 
-              src="/cyclist.gif" 
-              alt="Ciclista a pedalar" 
-              style="width: 38px; height: 38px; object-fit: contain; mix-blend-mode: screen; filter: drop-shadow(0 0 6px ${primaryColor}); transform: ${bearing > 90 && bearing < 270 ? 'scaleX(-1)' : 'scaleX(1)'};" 
-            />
-          </div>
-        </div>
-      `,
-      iconSize: [64, 64],
-      iconAnchor: [32, 32]
-    });
-
-    if (!riderMarkerRef.current) {
-      riderMarkerRef.current = L.marker([riderPos.lat, riderPos.lng], { icon: riderIcon, zIndexOffset: 1000 }).addTo(map);
-    } else {
-      riderMarkerRef.current.setLatLng([riderPos.lat, riderPos.lng]);
-      riderMarkerRef.current.setIcon(riderIcon);
-    }
-
-    // Auto-follow pan
-    if (autoFollow) {
-      map.setView([riderPos.lat, riderPos.lng], zoomLevel, { animate: true });
-    }
-  }, [riderPos, currentDistanceKm, speedKmH, primaryColor, autoFollow, currentRoute, zoomLevel]);
 
   // Handle GPX File Upload
   const handleFileUpload = (e) => {
