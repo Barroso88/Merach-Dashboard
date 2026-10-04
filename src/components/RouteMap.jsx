@@ -40,8 +40,7 @@ export default function RouteMap({
   const [isRouteSelectorOpen, setIsRouteSelectorOpen] = useState(false);
   const [autoFollow, setAutoFollow] = useState(true);
   const [mapStyle, setMapStyle] = useState('satellite'); // Default to satellite for real roads
-  const [viewMode, setViewMode] = useState('cockpit'); // 'cockpit' (3D Frontal) | 'topdown' (2D Aérea)
-  const [zoomLevel, setZoomLevel] = useState(18); // Close-up detail
+  const [zoomLevel, setZoomLevel] = useState(17); // Close-up detail
 
   const fileInputRef = useRef(null);
   const mapContainerRef = useRef(null);
@@ -139,19 +138,6 @@ export default function RouteMap({
       attribution: tileCfg.attribution
     }).addTo(mapInstanceRef.current);
   }, [mapStyle]);
-
-  const handleToggleViewMode = () => {
-    const nextMode = viewMode === 'cockpit' ? 'topdown' : 'cockpit';
-    setViewMode(nextMode);
-    const nextZoom = nextMode === 'cockpit' ? 18 : 15;
-    setZoomLevel(nextZoom);
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setZoom(nextZoom);
-      if (nextMode === 'topdown' && fullPolylineRef.current) {
-        mapInstanceRef.current.fitBounds(fullPolylineRef.current.getBounds(), { padding: [50, 50] });
-      }
-    }
-  };
 
   // Draw or Update Route Polylines and Markers
   useEffect(() => {
@@ -264,15 +250,11 @@ export default function RouteMap({
       riderMarkerRef.current.setIcon(riderIcon);
     }
 
-    // Auto-follow pan / setView
+    // Auto-follow pan
     if (autoFollow) {
-      if (viewMode === 'cockpit') {
-        map.setView([riderPos.lat, riderPos.lng], zoomLevel, { animate: true });
-      } else {
-        map.panTo([riderPos.lat, riderPos.lng], { animate: true, duration: 0.8 });
-      }
+      map.setView([riderPos.lat, riderPos.lng], zoomLevel, { animate: true });
     }
-  }, [riderPos, currentDistanceKm, speedKmH, primaryColor, autoFollow, currentRoute, viewMode, zoomLevel]);
+  }, [riderPos, currentDistanceKm, speedKmH, primaryColor, autoFollow, currentRoute, zoomLevel]);
 
   // Handle GPX File Upload
   const handleFileUpload = (e) => {
@@ -326,74 +308,14 @@ export default function RouteMap({
   return (
     <div className="w-full flex flex-col gap-4 animate-fadeIn">
       {/* MAP VIEWPORT CONTAINER */}
-      <div 
-        className={`relative w-full h-[540px] md:h-[620px] rounded-3xl overflow-hidden border shadow-2xl transition-all ${
-          isRose ? 'border-[#ff2d75]/40 shadow-[0_0_35px_-5px_rgba(255,45,117,0.3)]' : 'border-sky-500/30 shadow-[0_0_35px_-5px_rgba(56,189,248,0.25)]'
-        }`}
-        style={{
-          perspective: viewMode === 'cockpit' ? '820px' : 'none',
-          perspectiveOrigin: '50% 72%'
-        }}
-      >
-        {/* Real Leaflet Map with 3D Frontal Navigation Tilt */}
+      <div className={`relative w-full h-[520px] md:h-[600px] rounded-3xl overflow-hidden border shadow-2xl transition-all ${
+        isRose ? 'border-[#ff2d75]/40 shadow-[0_0_35px_-5px_rgba(255,45,117,0.3)]' : 'border-sky-500/30 shadow-[0_0_35px_-5px_rgba(56,189,248,0.25)]'
+      }`}>
+        {/* Clean Edge-to-Edge Map */}
         <div 
           ref={mapContainerRef} 
-          className="w-full h-full z-0 transition-transform duration-700 ease-out" 
-          style={
-            viewMode === 'cockpit'
-              ? {
-                  width: '160%',
-                  height: '160%',
-                  marginLeft: '-30%',
-                  marginTop: '-22%',
-                  transform: `rotateX(56deg) rotateZ(${-(riderPos?.bearing || 0)}deg)`,
-                  transformOrigin: '50% 68%'
-                }
-              : {
-                  width: '100%',
-                  height: '100%',
-                  transform: 'none'
-                }
-          }
+          className="w-full h-full z-0" 
         />
-
-        {/* Horizon Sky Atmospheric Fade (Cockpit Mode Only) */}
-        {viewMode === 'cockpit' && (
-          <div 
-            className="absolute top-0 left-0 right-0 h-36 pointer-events-none z-10"
-            style={{
-              background: 'linear-gradient(to bottom, rgba(8, 12, 20, 0.95) 0%, rgba(8, 12, 20, 0.6) 35%, transparent 100%)'
-            }}
-          />
-        )}
-
-        {/* Cockpit Frontal Pilot Avatar (Cockpit Mode Only) */}
-        {viewMode === 'cockpit' && (
-          <div className="absolute bottom-36 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex flex-col items-center animate-fadeIn">
-            {/* Direction Guideline Beam into the horizon */}
-            <div 
-              className="w-1.5 h-16 rounded-full mb-1 opacity-85 animate-pulse"
-              style={{
-                background: `linear-gradient(to top, transparent, ${primaryColor})`,
-                boxShadow: `0 0 16px ${primaryColor}`
-              }}
-            />
-            {/* Cyclist Cockpit Marker */}
-            <div 
-              className="w-12 h-12 rounded-2xl flex items-center justify-center border shadow-2xl backdrop-blur-md"
-              style={{
-                background: '#090d16e6',
-                borderColor: primaryColor,
-                boxShadow: `0 0 25px ${primaryColor}aa`
-              }}
-            >
-              <span className="text-2xl animate-bounce" style={{ animationDuration: '2s' }}>🚴</span>
-            </div>
-            <span className="text-[10px] font-mono font-bold text-white px-2 py-0.5 mt-1 rounded-full bg-black/80 border border-white/20 shadow-md">
-              {speedKmH > 0 ? `${speedKmH} km/h` : 'Parado'}
-            </span>
-          </div>
-        )}
 
         {/* TOP HUD BAR: Route Title, Selector & GPX Upload */}
         <div className="absolute top-4 left-4 right-16 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
@@ -565,24 +487,8 @@ export default function RouteMap({
           </div>
         </div>
 
-        {/* MAP CONTROLS OVERLAY: View Mode, Zoom, Auto-Follow & Tile Layer Switcher */}
+        {/* MAP CONTROLS OVERLAY: Zoom, Auto-Follow & Tile Layer Switcher */}
         <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
-          {/* View Mode Toggle: 3D Frontal Cockpit vs 2D Aérea */}
-          <button
-            type="button"
-            onClick={handleToggleViewMode}
-            className={`px-3 h-10 rounded-2xl backdrop-blur-xl border flex items-center gap-2 font-bold text-xs transition-all cursor-pointer shadow-lg ${
-              viewMode === 'cockpit'
-                ? isRose
-                  ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] border-[#ff2d75] text-white shadow-[#ff2d75]/50'
-                  : 'bg-gradient-to-r from-sky-500 to-emerald-500 border-sky-400 text-slate-950 shadow-sky-500/40 font-black'
-                : 'bg-black/75 border-white/20 text-slate-300 hover:text-white'
-            }`}
-            title="Alternar entre Visão Frontal (3D Cockpit) e Visão Aérea (2D)"
-          >
-            <Navigation className={`w-3.5 h-3.5 ${viewMode === 'cockpit' ? 'rotate-45' : ''}`} />
-            <span>{viewMode === 'cockpit' ? '3D Frontal' : '2D Aérea'}</span>
-          </button>
 
           {/* Quick Zoom In & Zoom Out Buttons */}
           <div className="flex flex-col rounded-2xl overflow-hidden border border-white/20 backdrop-blur-xl bg-black/75 shadow-lg">
