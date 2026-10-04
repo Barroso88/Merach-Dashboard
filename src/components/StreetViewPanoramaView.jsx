@@ -38,8 +38,7 @@ export default function StreetViewPanoramaView({
   const [authError, setAuthError] = useState(hasGoogleMapsAuthError());
   const [autoHeading, setAutoHeading] = useState(true);
   const [currentPanoInfo, setCurrentPanoInfo] = useState(null);
-  const [userInteracting, setUserInteracting] = useState(false);
-  const [invertColors, setInvertColors] = useState(false); // Natural colors by default now that billing is enabled
+  const [invertColors, setInvertColors] = useState(true); // Invert negative dev shader by default
   const [showBillingTip, setShowBillingTip] = useState(false);
 
   // Calculate realistic camera pitch based on road gradient (climbing looks slightly up, descent looks down)
@@ -333,126 +332,49 @@ export default function StreetViewPanoramaView({
             </div>
           </div>
 
-          {/* Camera & Color Controls (Top Right) */}
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
-            {/* Color Mode Toggle (Fix Google Dev Inverted Shader) */}
-            <button
-              type="button"
-              onClick={() => setInvertColors(!invertColors)}
-              className={`px-3 py-2 rounded-2xl backdrop-blur-xl border text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer ${
-                invertColors
-                  ? isRose
-                    ? 'bg-[#ff2d75]/90 border-[#ff2d75] text-white shadow-[#ff2d75]/40'
-                    : 'bg-emerald-500 border-emerald-400 text-slate-950 font-black shadow-emerald-500/30'
-                  : 'bg-black/75 border-white/20 text-slate-200 hover:text-white'
-              }`}
-              title="Alternar correção de cores (reverter negativo da Google)"
-            >
-              <span>🎨 {invertColors ? 'Cores Reais' : 'Original Dev'}</span>
-            </button>
-
-            {/* Google Billing Info Button */}
-            <button
-              type="button"
-              onClick={() => setShowBillingTip(!showBillingTip)}
-              className="w-9 h-9 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/75 hover:bg-black/95 text-amber-300 hover:text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer shadow-lg"
-              title="Informação sobre a marca da Google"
-            >
-              ℹ️
-            </button>
+          {/* Compass & Direction Cockpit (Top Left, under HUD) */}
+          <div className="absolute top-16 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
+            <div className="px-3 py-1.5 rounded-2xl backdrop-blur-xl border border-white/15 bg-black/75 shadow-lg flex items-center gap-2 font-mono text-xs text-white">
+              <div
+                className="w-4 h-4 rounded-full border border-sky-400 flex items-center justify-center transition-transform duration-300"
+                style={{ transform: `rotate(${bearing}deg)` }}
+                title={`Orientação da estrada: ${Math.round(bearing)}°`}
+              >
+                <div className="w-0.5 h-2 bg-sky-400 rounded-full" />
+              </div>
+              <span className="font-bold text-[11px] text-sky-300">{Math.round(bearing)}°</span>
+            </div>
 
             {/* Re-center / Auto Heading Button */}
             <button
               type="button"
               onClick={handleRecenterHeading}
-              className={`px-3 py-2 rounded-2xl backdrop-blur-xl border text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-2xl backdrop-blur-xl border text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer ${
                 autoHeading
                   ? isRose
                     ? 'bg-[#ff2d75] border-[#ff2d75] text-white'
-                    : 'bg-sky-500 border-sky-400 text-slate-950'
+                    : 'bg-sky-500 border-sky-400 text-slate-950 font-black'
                   : 'bg-black/75 border-white/20 text-slate-200 hover:text-white'
               }`}
               title="Alinhar visão com a direção da estrada"
             >
               <Compass className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Centrar Estrada</span>
+              <span>Centrar Frente</span>
             </button>
-          </div>
 
-          {/* Billing Tip Popover */}
-          {showBillingTip && (
-            <div className={`absolute top-16 right-4 z-40 max-w-sm p-4 rounded-2xl backdrop-blur-2xl border shadow-2xl animate-fadeIn ${
-              isRose ? 'bg-[#1b0323]/95 border-[#ff2d75]/50' : 'bg-slate-950/95 border-slate-800'
-            }`}>
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span className="text-amber-400">💡</span> Aviso "For development purposes only"
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowBillingTip(false)}
-                  className="text-slate-400 hover:text-white text-xs cursor-pointer p-0.5"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed mb-2.5">
-                A Google inverte as cores e mostra esta marca de água quando a chave não tem uma conta de faturação associada na Google Cloud.
-              </p>
-              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[10px] text-slate-300 space-y-1 mb-3">
-                <p className="font-bold text-emerald-400">✓ A Google dá 200$ (USD) grátis TODOS os meses!</p>
-                <p className="text-slate-400">Para a bicicleta Merach em casa nunca terá custos. Basta associar para desbloquear imagens oficiais da Google.</p>
-              </div>
-              <a
-                href="https://console.cloud.google.com/billing"
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all text-center"
-              >
-                <span>Ativar Conta Gratuita na Google</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          )}
-
-          {/* Cycling Cockpit Bar (Bottom Overlay) */}
-          <div className="absolute bottom-4 left-4 right-4 z-20 pointer-events-none">
-            <div className={`p-3.5 rounded-3xl backdrop-blur-2xl border shadow-2xl pointer-events-auto flex flex-wrap items-center justify-between gap-3 ${
-              isRose ? 'bg-[#1b0323]/85 border-[#ff2d75]/40' : 'bg-slate-950/85 border-slate-800'
-            }`}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                  🚴
-                </div>
-                <div>
-                  <p className="text-white text-xs font-bold truncate max-w-[200px] sm:max-w-xs">
-                    {currentRoute?.name || 'Percurso Real'}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    {currentDistanceKm} km percorridos • {Math.round(speedKmH)} km/h • {cadenceRpm} RPM
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-right font-mono">
-                  <span className="block text-[8px] uppercase tracking-wider text-slate-400">Inclinação</span>
-                  <span className={`text-xs font-black ${gradient > 2 ? 'text-rose-400' : gradient < -1 ? 'text-sky-400' : 'text-emerald-400'}`}>
-                    {gradient >= 0 ? '+' : ''}{gradient}%
-                  </span>
-                </div>
-                {onSwitchToMap && (
-                  <button
-                    type="button"
-                    onClick={onSwitchToMap}
-                    className="px-3 py-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Ver Mapa</span>
-                  </button>
-                )}
-              </div>
-            </div>
+            {/* Color Inversion Toggle (Reverses Google Negative Effect) */}
+            <button
+              type="button"
+              onClick={() => setInvertColors(!invertColors)}
+              className={`px-3 py-1.5 rounded-2xl backdrop-blur-xl border text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer ${
+                invertColors
+                  ? 'bg-emerald-500 border-emerald-400 text-slate-950 font-black shadow-emerald-500/30'
+                  : 'bg-black/75 border-white/20 text-slate-300 hover:text-white'
+              }`}
+              title="Inverter cores para anular o efeito negativo da Google em modo desenvolvimento"
+            >
+              <span>🎨 {invertColors ? 'Cores Reais (Ativo)' : 'Cores Invertidas'}</span>
+            </button>
           </div>
         </>
       )}
