@@ -368,43 +368,10 @@ export default function CarView3DMap({
       {/* 3D Cockpit HUD Overlays */}
       {!loading && !error && (
         <>
-          {/* Compass & Mode Badge (Top Left, under HUD) */}
-          <div className="absolute top-16 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
-            <div className="px-3 py-1.5 rounded-2xl backdrop-blur-xl border border-white/15 bg-black/80 shadow-lg flex items-center gap-2 font-mono text-xs text-white">
-              <Navigation2
-                className={`w-3.5 h-3.5 ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'} transition-transform duration-300`}
-                style={{ transform: `rotate(${riderPos?.bearing || 0}deg)` }}
-              />
-              <span className="font-bold text-[11px] text-sky-300">
-                {Math.round(riderPos?.bearing || 0)}°
-              </span>
-              <span className="text-[10px] text-slate-400 border-l border-white/20 pl-2">
-                {isFrontalView ? 'Visão Frontal (Carro)' : 'Visão Aérea (Norte)'}
-              </span>
-            </div>
-
-            {/* Perspective View Mode Toggle Button (3D Car Mode vs 2D Top-Down) */}
-            <button
-              type="button"
-              onClick={handleToggleFrontalView}
-              className={`px-3 py-1.5 rounded-2xl backdrop-blur-xl border text-xs font-black flex items-center gap-1.5 shadow-lg transition-all cursor-pointer ${
-                isFrontalView
-                  ? isRose
-                    ? 'bg-[#ff2d75] border-[#ff2d75] text-white shadow-[#ff2d75]/50'
-                    : 'bg-sky-500 border-sky-400 text-slate-950 shadow-sky-500/40'
-                  : 'bg-black/80 border-white/20 text-slate-300 hover:text-white'
-              }`}
-              title={isFrontalView ? 'Mudar para vista aérea 2D (de cima)' : 'Mudar para visão frontal 3D (como no carro)'}
-            >
-              <Car className="w-3.5 h-3.5" />
-              <span>{isFrontalView ? '🚗 Modo Frontal 3D' : '🗺️ Modo Aéreo 2D'}</span>
-            </button>
-          </div>
-
-          {/* Quick Zoom & Layer Controls (Top Right) */}
-          <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
+          {/* Floating Zoom & Map Style Controls (Positioned safely on right margin, below the top HUD bar) */}
+          <div className="absolute top-20 right-4 z-20 flex flex-col items-end gap-2 pointer-events-auto">
             {/* Zoom In & Zoom Out */}
-            <div className="flex flex-col rounded-2xl overflow-hidden border border-white/20 backdrop-blur-xl bg-black/80 shadow-lg">
+            <div className="flex flex-col rounded-2xl overflow-hidden border border-white/20 backdrop-blur-xl bg-black/85 shadow-xl">
               <button
                 type="button"
                 onClick={() => setZoomLevel(prev => Math.min(19, prev + 0.5))}
@@ -428,11 +395,11 @@ export default function CarView3DMap({
             <button
               type="button"
               onClick={() => setMapStyleType(prev => prev === 'satellite' ? 'street' : 'satellite')}
-              className="px-2.5 h-10 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/80 hover:bg-black/95 text-slate-200 hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-lg"
+              className="px-2.5 h-9 rounded-2xl backdrop-blur-xl border border-white/20 bg-black/85 hover:bg-black/95 text-slate-200 hover:text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-xl"
               title="Mudar estilo de mapa (Satélite Real ou Ruas)"
             >
-              <Layers className="w-4 h-4 text-sky-400" />
-              <span className="text-[10px] hidden sm:inline">
+              <Layers className="w-3.5 h-3.5 text-sky-400" />
+              <span className="text-[10px]">
                 {mapStyleType === 'satellite' ? '🛰️ Satélite' : '🗺️ Ruas'}
               </span>
             </button>

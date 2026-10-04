@@ -353,7 +353,7 @@ export default function RouteMap({
             </div>
           </div>
 
-          {/* Quick HUD Pill: Gradient / Slope & Elevation */}
+          {/* Quick HUD Pill: Gradient / Slope & Elevation & Bearing */}
           {riderPos && gradientBadge && (
             <div className="flex items-center gap-2 pointer-events-auto">
               <div className={`px-3 py-1.5 rounded-2xl backdrop-blur-xl border font-mono font-bold text-xs flex items-center gap-2 shadow-lg ${gradientBadge.color}`}>
@@ -361,6 +361,10 @@ export default function RouteMap({
                 <span>{gradientBadge.label}</span>
                 <span className="text-[10px] text-slate-300 border-l border-white/20 pl-2">
                   {riderPos.ele} m Alt
+                </span>
+                <span className="text-[10px] text-sky-300 border-l border-white/20 pl-2 flex items-center gap-1 font-bold">
+                  <span>🧭</span>
+                  <span>{Math.round(riderPos.bearing || 0)}°</span>
                 </span>
               </div>
             </div>
