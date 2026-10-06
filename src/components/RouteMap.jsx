@@ -544,19 +544,19 @@ export default function RouteMap({
                 {/* Velocidade */}
                 <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                   <span className="block text-[8px] md:text-[9px] uppercase tracking-wider text-slate-400 font-sans">Velocidade</span>
-                  <span className="text-sm md:text-base font-black text-white">{speedKmH} <span className="text-[9px] md:text-[10px] text-slate-400">km/h</span></span>
+                  <span className="text-sm md:text-base font-black text-white">{Number(speedKmH || 0).toFixed(1)} <span className="text-[9px] md:text-[10px] text-slate-400">km/h</span></span>
                 </div>
 
                 {/* Cadência */}
                 <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                   <span className="block text-[8px] md:text-[9px] uppercase tracking-wider text-slate-400 font-sans">Cadência</span>
-                  <span className="text-sm md:text-base font-black text-white">{cadenceRpm} <span className="text-[9px] md:text-[10px] text-slate-400">RPM</span></span>
+                  <span className="text-sm md:text-base font-black text-white">{Number(cadenceRpm || 0).toFixed(1)} <span className="text-[9px] md:text-[10px] text-slate-400">RPM</span></span>
                 </div>
 
                 {/* Distância */}
                 <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                   <span className="block text-[8px] md:text-[9px] uppercase tracking-wider text-slate-400 font-sans">Distância</span>
-                  <span className="text-sm md:text-base font-black text-white">{Number(currentDistanceKm || 0).toFixed(2)} <span className="text-[9px] md:text-[10px] text-slate-400">km</span></span>
+                  <span className="text-sm md:text-base font-black text-white">{Number(currentDistanceKm || 0).toFixed(1)} <span className="text-[9px] md:text-[10px] text-slate-400">km</span></span>
                 </div>
 
                 {/* Calorias (Substitui Volta / Lap #1) */}
@@ -565,7 +565,7 @@ export default function RouteMap({
                     <Flame className="w-2.5 h-2.5 text-amber-400" />
                     Calorias
                   </span>
-                  <span className="text-sm md:text-base font-black text-amber-400">{Math.round(caloriesKcal || 0)} <span className="text-[9px] md:text-[10px] text-amber-300/80">kcal</span></span>
+                  <span className="text-sm md:text-base font-black text-amber-400">{Number(caloriesKcal || 0).toFixed(1)} <span className="text-[9px] md:text-[10px] text-amber-300/80">kcal</span></span>
                 </div>
               </div>
 

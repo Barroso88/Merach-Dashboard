@@ -135,9 +135,9 @@ export default function SportNeedleGauge({
     return `M ${x1} ${y1} A ${arcR} ${arcR} 0 ${largeArc} 1 ${x2} ${y2}`;
   }, [ratio, needleAngle, center, outerRadius]);
 
-  // Format the display value nicely (e.g. speed has 1 decimal if needed, cadence is integer)
+  // Format the display value strictly with 1 decimal place without rounding
   const formattedValue = typeof value === 'number' 
-    ? (Number.isInteger(value) ? value : value.toFixed(1)) 
+    ? value.toFixed(1) 
     : value;
 
   const isRose = themeConfig?.id === 'rose';

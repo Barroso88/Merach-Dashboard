@@ -124,7 +124,7 @@ export function getRiderPositionAlongRoute(route, coveredKm) {
     gradient,
     bearing,
     progressPercent: Math.min(100, Number(((currentKm / totalRouteKm) * 100).toFixed(1))),
-    remainingKm: Number(Math.max(0, totalRouteKm - currentKm).toFixed(2)),
+    remainingKm: Number(Math.max(0, totalRouteKm - currentKm).toFixed(1)),
     lapNumber,
     isFinished
   };

@@ -350,7 +350,7 @@ export default function App() {
       const count = prev.samplesCount + weight;
       const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + (effectiveSpeed * weight)) / count).toFixed(1));
       const newMaxSpeed = Math.max(prev.maxSpeed, speedKmH);
-      const newAvgCadence = Math.round(((prev.avgCadence * prev.samplesCount) + (effectiveCadence * weight)) / count);
+      const newAvgCadence = Number((((prev.avgCadence * prev.samplesCount) + (effectiveCadence * weight)) / count).toFixed(1));
       const newMaxCadence = Math.max(prev.maxCadence, cadenceRpm);
 
       return {
@@ -429,14 +429,14 @@ export default function App() {
       title: 'Treino Merach Bike',
       date: new Date().toISOString(),
       durationSeconds: finalDuration,
-      distanceKm: Number((sessionStats.distanceKm || 0).toFixed(2)),
-      caloriesKcal: Math.round(sessionStats.caloriesKcal || 0),
-      avgSpeed: sessionStats.avgSpeed,
-      maxSpeed: sessionStats.maxSpeed,
-      avgCadence: sessionStats.avgCadence,
-      maxCadence: sessionStats.maxCadence,
+      distanceKm: Number((sessionStats.distanceKm || 0).toFixed(1)),
+      caloriesKcal: Number((sessionStats.caloriesKcal || 0).toFixed(1)),
+      avgSpeed: Number((sessionStats.avgSpeed || 0).toFixed(1)),
+      maxSpeed: Number((sessionStats.maxSpeed || 0).toFixed(1)),
+      avgCadence: Number((sessionStats.avgCadence || 0).toFixed(1)),
+      maxCadence: Number((sessionStats.maxCadence || 0).toFixed(1)),
       samples: sessionSamplesRef.current.length > 0 ? sessionSamplesRef.current : [
-        { time: '0m', cadence: sessionStats.avgCadence, speed: sessionStats.avgSpeed }
+        { time: '0m', cadence: Number((sessionStats.avgCadence || 0).toFixed(1)), speed: Number((sessionStats.avgSpeed || 0).toFixed(1)) }
       ]
     };
 

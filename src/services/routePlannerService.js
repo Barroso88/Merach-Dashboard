@@ -188,7 +188,7 @@ export async function calculateRoute(start, end, customName = '') {
       lat,
       lng,
       ele: Math.round(ele),
-      distanceKm: Number(cumulativeDistKm.toFixed(2)),
+      distanceKm: Number(cumulativeDistKm.toFixed(1)),
       bearing
     });
   }

@@ -342,13 +342,13 @@ export class HomeAssistantService {
       }
 
       return {
-        cadence: cadenceRaw ? Math.round(cadenceRaw.val) : 0,
+        cadence: cadenceRaw ? Number(Number(cadenceRaw.val).toFixed(1)) : 0,
         speed,
-        power: powerRaw ? Math.round(powerRaw.val) : 0,
-        resistance: resistanceRaw ? Math.round(resistanceRaw.val) : 0,
-        heartRate: heartRateRaw ? Math.round(heartRateRaw.val) : 0,
+        power: powerRaw ? Number(Number(powerRaw.val).toFixed(1)) : 0,
+        resistance: resistanceRaw ? Number(Number(resistanceRaw.val).toFixed(1)) : 0,
+        heartRate: heartRateRaw ? Number(Number(heartRateRaw.val).toFixed(1)) : 0,
         distance,
-        calories: caloriesRaw ? Math.round(caloriesRaw.val) : null
+        calories: caloriesRaw ? Number(Number(caloriesRaw.val).toFixed(1)) : null
       };
     } catch (err) {
       console.warn('Failed to fetch telemetry from Home Assistant:', err);

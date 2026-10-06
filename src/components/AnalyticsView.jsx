@@ -127,19 +127,19 @@ export default function AnalyticsView({
   // Summary statistics for the filtered period
   const stats = useMemo(() => {
     const totalCount = filteredWorkouts.length;
-    const totalDurationSeconds = filteredWorkouts.reduce((sum, w) => sum + (w.durationSeconds || 0), 0);
-    const totalDistance = Number(filteredWorkouts.reduce((sum, w) => sum + (w.distanceKm || 0), 0).toFixed(1));
-    const totalCalories = filteredWorkouts.reduce((sum, w) => sum + (w.caloriesKcal || 0), 0);
+    const totalDurationSeconds = filteredWorkouts.reduce((sum, w) => sum + (Number(w.durationSeconds) || 0), 0);
+    const totalDistance = Number(filteredWorkouts.reduce((sum, w) => sum + (Number(w.distanceKm) || 0), 0).toFixed(1));
+    const totalCalories = Number(filteredWorkouts.reduce((sum, w) => sum + (Number(w.caloriesKcal) || 0), 0).toFixed(1));
     
     const avgSpeed = totalCount > 0
-      ? Number((filteredWorkouts.reduce((sum, w) => sum + (w.avgSpeed || 0), 0) / totalCount).toFixed(1))
+      ? Number((filteredWorkouts.reduce((sum, w) => sum + (Number(w.avgSpeed) || 0), 0) / totalCount).toFixed(1))
       : 0;
     const maxSpeedRecorded = totalCount > 0
-      ? Math.max(...filteredWorkouts.map(w => w.maxSpeed || w.avgSpeed || 0))
+      ? Number(Math.max(...filteredWorkouts.map(w => Number(w.maxSpeed) || Number(w.avgSpeed) || 0)).toFixed(1))
       : 0;
 
     const avgCadence = totalCount > 0
-      ? Math.round(filteredWorkouts.reduce((sum, w) => sum + (w.avgCadence || 0), 0) / totalCount)
+      ? Number((filteredWorkouts.reduce((sum, w) => sum + (Number(w.avgCadence) || 0), 0) / totalCount).toFixed(1))
       : 0;
 
     const formatTotalTime = (secs) => {
@@ -186,21 +186,21 @@ export default function AnalyticsView({
         return parsed.year === targetYear && parsed.month === targetMonth && parsed.day === day;
       });
 
-      const distance = Number(dayWorkouts.reduce((sum, w) => sum + (Number(w.distanceKm) || 0), 0).toFixed(2));
-      const calories = Math.round(dayWorkouts.reduce((sum, w) => sum + (Number(w.caloriesKcal) || 0), 0));
+      const distance = Number(dayWorkouts.reduce((sum, w) => sum + (Number(w.distanceKm) || 0), 0).toFixed(1));
+      const calories = Number(dayWorkouts.reduce((sum, w) => sum + (Number(w.caloriesKcal) || 0), 0).toFixed(1));
       const durationSeconds = dayWorkouts.reduce((sum, w) => sum + (Number(w.durationSeconds) || 0), 0);
-      const durationMins = Math.round(durationSeconds / 60);
+      const durationMins = Number((durationSeconds / 60).toFixed(1));
 
       const avgSpeed = dayWorkouts.length > 0
         ? Number((dayWorkouts.reduce((sum, w) => sum + (Number(w.avgSpeed) || 0), 0) / dayWorkouts.length).toFixed(1))
         : 0;
 
       const maxSpeed = dayWorkouts.length > 0
-        ? Math.max(...dayWorkouts.map((w) => Number(w.maxSpeed) || Number(w.avgSpeed) || 0))
+        ? Number(Math.max(...dayWorkouts.map((w) => Number(w.maxSpeed) || Number(w.avgSpeed) || 0)).toFixed(1))
         : 0;
 
       const avgCadence = dayWorkouts.length > 0
-        ? Math.round(dayWorkouts.reduce((sum, w) => sum + (Number(w.avgCadence) || 0), 0) / dayWorkouts.length)
+        ? Number((dayWorkouts.reduce((sum, w) => sum + (Number(w.avgCadence) || 0), 0) / dayWorkouts.length).toFixed(1))
         : 0;
 
       data.push({
@@ -227,7 +227,7 @@ export default function AnalyticsView({
   // Monthly summary stats for the chart header
   const monthlyStats = useMemo(() => {
     const totalDistance = Number(chartData.reduce((sum, d) => sum + d.distance, 0).toFixed(1));
-    const totalCalories = chartData.reduce((sum, d) => sum + d.calories, 0);
+    const totalCalories = Number(chartData.reduce((sum, d) => sum + d.calories, 0).toFixed(1));
     const totalCount = chartData.reduce((sum, d) => sum + d.workoutCount, 0);
     const activeDays = chartData.filter(d => d.workoutCount > 0).length;
     return { totalDistance, totalCalories, totalCount, activeDays };
@@ -394,7 +394,7 @@ export default function AnalyticsView({
             </div>
           </div>
           <div className="text-3xl font-black font-mono" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
-            {stats.totalDistance} <span className="text-xs font-sans font-medium text-slate-400">km</span>
+            {Number(stats.totalDistance || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">km</span>
           </div>
           <span className={`text-[10px] mt-1 ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>Quilómetros percorridos</span>
         </div>
@@ -412,7 +412,7 @@ export default function AnalyticsView({
             </div>
           </div>
           <div className="text-3xl font-black font-mono" style={{ color: isRose ? '#9400D3' : '#fbbf24' }}>
-            {stats.totalCalories} <span className="text-xs font-sans font-medium text-slate-400">kcal</span>
+            {Number(stats.totalCalories || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">kcal</span>
           </div>
           <span className={`text-[10px] mt-1 ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`}>Gasto calórico total</span>
         </div>
@@ -444,7 +444,7 @@ export default function AnalyticsView({
                 </span>
               </div>
               <p className={`text-xs mt-0.5 ${isRose ? 'text-pink-200/80' : 'text-slate-400'}`}>
-                {monthName}: <strong className="text-white">{monthlyStats.totalCount} treinos</strong> ({monthlyStats.totalDistance} km • {monthlyStats.totalCalories} kcal)
+                {monthName}: <strong className="text-white">{monthlyStats.totalCount} treinos</strong> ({Number(monthlyStats.totalDistance).toFixed(1)} km • {Number(monthlyStats.totalCalories).toFixed(1)} kcal)
               </p>
             </div>
           </div>
@@ -605,27 +605,27 @@ export default function AnalyticsView({
                               <div className="space-y-1 pt-1">
                                 <div className="flex justify-between gap-4 font-bold" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
                                   <span>Distância:</span>
-                                  <span>{data.distance} km</span>
+                                  <span>{Number(data.distance || 0).toFixed(1)} km</span>
                                 </div>
                                 <div className="flex justify-between gap-4" style={{ color: isRose ? '#9400D3' : '#f59e0b' }}>
                                   <span>Calorias:</span>
-                                  <span>{data.calories} kcal</span>
+                                  <span>{Number(data.calories || 0).toFixed(1)} kcal</span>
                                 </div>
                                 <div className="flex justify-between gap-4 text-slate-300">
                                   <span>Duração:</span>
-                                  <span>{data.durationMins} min</span>
+                                  <span>{Number(data.durationMins || 0).toFixed(1)} min</span>
                                 </div>
                                 {data.avgSpeed > 0 && (
                                   <div className="flex justify-between gap-4" style={{ color: isRose ? '#ff85b3' : '#38bdf8' }}>
                                     <span>Vel. Média:</span>
-                                    <span>{data.avgSpeed} km/h</span>
+                                    <span>{Number(data.avgSpeed || 0).toFixed(1)} km/h</span>
                                   </div>
                                 )}
                                 {data.workouts && data.workouts.length > 0 && (
                                   <div className="pt-1.5 border-t border-white/10 text-[10px] text-slate-400 font-sans space-y-0.5">
                                     {data.workouts.map((w, idx) => (
                                       <div key={idx} className="truncate max-w-[220px]">
-                                        • {w.title || 'Treino'} ({Math.round((w.durationSeconds || 0) / 60)}m, {w.distanceKm}km)
+                                        • {w.title || 'Treino'} ({Number((w.durationSeconds || 0) / 60).toFixed(1)}m, {Number(w.distanceKm || 0).toFixed(1)}km)
                                       </div>
                                     ))}
                                   </div>
@@ -692,15 +692,15 @@ export default function AnalyticsView({
                               <div className="space-y-1 pt-1">
                                 <div className="flex justify-between gap-4 font-bold" style={{ color: isRose ? '#9400D3' : '#f59e0b' }}>
                                   <span>Calorias:</span>
-                                  <span>{data.calories} kcal</span>
+                                  <span>{Number(data.calories || 0).toFixed(1)} kcal</span>
                                 </div>
                                 <div className="flex justify-between gap-4" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
                                   <span>Distância:</span>
-                                  <span>{data.distance} km</span>
+                                  <span>{Number(data.distance || 0).toFixed(1)} km</span>
                                 </div>
                                 <div className="flex justify-between gap-4 text-slate-300">
                                   <span>Duração:</span>
-                                  <span>{data.durationMins} min</span>
+                                  <span>{Number(data.durationMins || 0).toFixed(1)} min</span>
                                 </div>
                               </div>
                             ) : (
@@ -764,15 +764,15 @@ export default function AnalyticsView({
                               <div className="space-y-1 pt-1">
                                 <div className="flex justify-between gap-4 font-bold" style={{ color: isRose ? '#ff2d75' : '#38bdf8' }}>
                                   <span>Vel. Média:</span>
-                                  <span>{data.avgSpeed} km/h</span>
+                                  <span>{Number(data.avgSpeed || 0).toFixed(1)} km/h</span>
                                 </div>
                                 <div className="flex justify-between gap-4" style={{ color: isRose ? '#ff85b3' : '#06b6d4' }}>
                                   <span>Vel. Máxima:</span>
-                                  <span>{data.maxSpeed} km/h</span>
+                                  <span>{Number(data.maxSpeed || 0).toFixed(1)} km/h</span>
                                 </div>
                                 <div className="flex justify-between gap-4" style={{ color: isRose ? '#9400D3' : '#10b981' }}>
                                   <span>Cadência:</span>
-                                  <span>{data.avgCadence} RPM</span>
+                                  <span>{Number(data.avgCadence || 0).toFixed(1)} RPM</span>
                                 </div>
                               </div>
                             ) : (
@@ -826,7 +826,7 @@ export default function AnalyticsView({
             <div>
               <span className="text-slate-500">Média por Sessão: </span>
               <strong className="text-white font-mono">
-                {monthlyStats.totalCount > 0 ? (monthlyStats.totalDistance / monthlyStats.totalCount).toFixed(1) : 0} km
+                {monthlyStats.totalCount > 0 ? (monthlyStats.totalDistance / monthlyStats.totalCount).toFixed(1) : (0).toFixed(1)} km
               </strong>
             </div>
           </div>
@@ -906,21 +906,21 @@ export default function AnalyticsView({
                       </td>
 
                       <td className="py-3.5 px-4 font-mono">
-                        <span className="font-bold text-sky-400">{workout.avgSpeed} km/h</span>
-                        <span className="text-[10px] text-slate-500 block">Pico: {workout.maxSpeed} km/h</span>
+                        <span className="font-bold text-sky-400">{Number(workout.avgSpeed || 0).toFixed(1)} km/h</span>
+                        <span className="text-[10px] text-slate-500 block">Pico: {Number(workout.maxSpeed || 0).toFixed(1)} km/h</span>
                       </td>
 
                       <td className="py-3.5 px-4 font-mono">
-                        <span className="font-bold text-emerald-400">{workout.avgCadence} RPM</span>
-                        <span className="text-[10px] text-slate-500 block">Pico: {workout.maxCadence} RPM</span>
+                        <span className="font-bold text-emerald-400">{Number(workout.avgCadence || 0).toFixed(1)} RPM</span>
+                        <span className="text-[10px] text-slate-500 block">Pico: {Number(workout.maxCadence || 0).toFixed(1)} RPM</span>
                       </td>
 
                       <td className="py-3.5 px-4 font-mono font-bold text-white">
-                        {workout.distanceKm} <span className="font-sans text-[10px] text-slate-400 font-normal">km</span>
+                        {Number(workout.distanceKm || 0).toFixed(1)} <span className="font-sans text-[10px] text-slate-400 font-normal">km</span>
                       </td>
 
                       <td className="py-3.5 px-4 font-mono font-bold text-amber-400">
-                        {workout.caloriesKcal} <span className="font-sans text-[10px] text-slate-400 font-normal">kcal</span>
+                        {Number(workout.caloriesKcal || 0).toFixed(1)} <span className="font-sans text-[10px] text-slate-400 font-normal">kcal</span>
                       </td>
 
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>

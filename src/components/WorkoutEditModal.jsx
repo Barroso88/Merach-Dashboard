@@ -59,12 +59,12 @@ export default function WorkoutEditModal({
         dateTime: localIso,
         durationMinutes: Math.floor(totalSec / 60),
         durationSeconds: totalSec % 60,
-        distanceKm: Number(workout.distanceKm || 0),
-        caloriesKcal: Math.round(workout.caloriesKcal || 0),
-        avgSpeed: Number(workout.avgSpeed || 0),
-        maxSpeed: Number(workout.maxSpeed || workout.avgSpeed || 0),
-        avgCadence: Math.round(workout.avgCadence || 0),
-        maxCadence: Math.round(workout.maxCadence || workout.avgCadence || 0),
+        distanceKm: Number(Number(workout.distanceKm || 0).toFixed(1)),
+        caloriesKcal: Number(Number(workout.caloriesKcal || 0).toFixed(1)),
+        avgSpeed: Number(Number(workout.avgSpeed || 0).toFixed(1)),
+        maxSpeed: Number(Number(workout.maxSpeed || workout.avgSpeed || 0).toFixed(1)),
+        avgCadence: Number(Number(workout.avgCadence || 0).toFixed(1)),
+        maxCadence: Number(Number(workout.maxCadence || workout.avgCadence || 0).toFixed(1)),
         notes: workout.notes || ''
       });
     } else {
@@ -83,11 +83,11 @@ export default function WorkoutEditModal({
         durationMinutes: 30,
         durationSeconds: 0,
         distanceKm: 10.0,
-        caloriesKcal: 250,
+        caloriesKcal: 250.0,
         avgSpeed: 20.0,
         maxSpeed: 26.0,
-        avgCadence: 75,
-        maxCadence: 90,
+        avgCadence: 75.0,
+        maxCadence: 90.0,
         notes: ''
       });
     }
@@ -118,16 +118,16 @@ export default function WorkoutEditModal({
       title: formData.title.trim() || 'Treino Merach Bike',
       date: dateObj.toISOString(),
       durationSeconds: Math.max(1, totalSeconds),
-      distanceKm: Number(Number(formData.distanceKm || 0).toFixed(2)),
-      caloriesKcal: Math.round(Number(formData.caloriesKcal || 0)),
+      distanceKm: Number(Number(formData.distanceKm || 0).toFixed(1)),
+      caloriesKcal: Number(Number(formData.caloriesKcal || 0).toFixed(1)),
       avgSpeed: Number(Number(formData.avgSpeed || 0).toFixed(1)),
       maxSpeed: Number(Number(formData.maxSpeed || formData.avgSpeed || 0).toFixed(1)),
-      avgCadence: Math.round(Number(formData.avgCadence || 0)),
-      maxCadence: Math.round(Number(formData.maxCadence || formData.avgCadence || 0)),
+      avgCadence: Number(Number(formData.avgCadence || 0).toFixed(1)),
+      maxCadence: Number(Number(formData.maxCadence || formData.avgCadence || 0).toFixed(1)),
       notes: formData.notes.trim(),
       samples: workout?.samples && workout.samples.length > 0 ? workout.samples : [
-        { time: '0m', cadence: Number(formData.avgCadence), speed: Number(formData.avgSpeed) },
-        { time: `${Math.round(totalSeconds / 60)}m`, cadence: Number(formData.avgCadence), speed: Number(formData.avgSpeed) }
+        { time: '0m', cadence: Number(Number(formData.avgCadence).toFixed(1)), speed: Number(Number(formData.avgSpeed).toFixed(1)) },
+        { time: `${Number((totalSeconds / 60).toFixed(1))}m`, cadence: Number(Number(formData.avgCadence).toFixed(1)), speed: Number(Number(formData.avgSpeed).toFixed(1)) }
       ]
     };
 
@@ -262,7 +262,7 @@ export default function WorkoutEditModal({
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="0.1"
                 min="0"
                 required
                 value={formData.distanceKm}
@@ -282,12 +282,13 @@ export default function WorkoutEditModal({
               </label>
               <input
                 type="number"
+                step="0.1"
                 min="0"
                 required
                 value={formData.caloriesKcal}
                 onChange={(e) => setFormData({ ...formData, caloriesKcal: e.target.value })}
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-mono font-bold transition-all outline-none ${inputClass}`}
-                placeholder="ex: 340"
+                placeholder="ex: 340.0"
               />
             </div>
           </div>
@@ -334,11 +335,12 @@ export default function WorkoutEditModal({
               </label>
               <input
                 type="number"
+                step="0.1"
                 min="0"
                 value={formData.avgCadence}
                 onChange={(e) => setFormData({ ...formData, avgCadence: e.target.value })}
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-mono font-bold transition-all outline-none ${inputClass}`}
-                placeholder="ex: 78"
+                placeholder="ex: 78.0"
               />
             </div>
             <div>
@@ -347,11 +349,12 @@ export default function WorkoutEditModal({
               </label>
               <input
                 type="number"
+                step="0.1"
                 min="0"
                 value={formData.maxCadence}
                 onChange={(e) => setFormData({ ...formData, maxCadence: e.target.value })}
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-mono transition-all outline-none ${inputClass}`}
-                placeholder="ex: 95"
+                placeholder="ex: 95.0"
               />
             </div>
           </div>

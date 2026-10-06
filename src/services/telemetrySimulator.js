@@ -26,7 +26,7 @@ export class MerachSimulator {
       this.currentCadence = Math.max(0, this.currentCadence * 0.7);
       this.currentSpeed = Math.max(0, this.currentSpeed * 0.85);
       return {
-        cadence: Math.round(this.currentCadence),
+        cadence: Number(Math.max(0, this.currentCadence).toFixed(1)),
         speed: Number(this.currentSpeed.toFixed(1))
       };
     }
@@ -56,7 +56,7 @@ export class MerachSimulator {
     this.currentSpeed += ((baseSpeed + speedNoise) - this.currentSpeed) * 0.25;
 
     return {
-      cadence: Math.max(0, Math.round(this.currentCadence)),
+      cadence: Number(Math.max(0, this.currentCadence).toFixed(1)),
       speed: Number(Math.max(0, this.currentSpeed).toFixed(1))
     };
   }

@@ -48,11 +48,11 @@ export default function LiveChart({
   const avgSpeed = speedValues.length 
     ? Number((speedValues.reduce((a, b) => a + b, 0) / speedValues.length).toFixed(1))
     : 0;
-  const maxSpeed = speedValues.length ? Math.max(...speedValues) : 0;
+  const maxSpeed = speedValues.length ? Number(Math.max(...speedValues).toFixed(1)) : 0;
   const avgCadence = cadenceValues.length 
-    ? Math.round(cadenceValues.reduce((a, b) => a + b, 0) / cadenceValues.length) 
+    ? Number((cadenceValues.reduce((a, b) => a + b, 0) / cadenceValues.length).toFixed(1)) 
     : 0;
-  const maxCadence = cadenceValues.length ? Math.max(...cadenceValues) : 0;
+  const maxCadence = cadenceValues.length ? Number(Math.max(...cadenceValues).toFixed(1)) : 0;
 
   return (
     <div className="glass-panel rounded-3xl p-6 border border-slate-800/80 flex flex-col h-full">
@@ -118,19 +118,19 @@ export default function LiveChart({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800/60 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">Velocidade Média:</span>
-          <span className="text-xs font-bold font-mono" style={{ color: speedColor }}>{avgSpeed} km/h</span>
+          <span className="text-xs font-bold font-mono" style={{ color: speedColor }}>{Number(avgSpeed).toFixed(1)} km/h</span>
         </div>
         <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800/60 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">Velocidade Pico:</span>
-          <span className="text-xs font-bold font-mono text-white">{maxSpeed} km/h</span>
+          <span className="text-xs font-bold font-mono text-white">{Number(maxSpeed).toFixed(1)} km/h</span>
         </div>
         <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800/60 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">Cadência Média:</span>
-          <span className="text-xs font-bold font-mono" style={{ color: cadenceColor }}>{avgCadence} RPM</span>
+          <span className="text-xs font-bold font-mono" style={{ color: cadenceColor }}>{Number(avgCadence).toFixed(1)} RPM</span>
         </div>
         <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800/60 flex items-center justify-between">
           <span className="text-[11px] text-slate-400">Cadência Pico:</span>
-          <span className="text-xs font-bold font-mono text-white">{maxCadence} RPM</span>
+          <span className="text-xs font-bold font-mono text-white">{Number(maxCadence).toFixed(1)} RPM</span>
         </div>
       </div>
 

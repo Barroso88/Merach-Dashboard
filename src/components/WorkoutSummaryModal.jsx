@@ -105,7 +105,7 @@ export default function WorkoutSummaryModal({
                 <span className={isRose ? 'text-pink-300 font-semibold' : 'text-slate-400'}>Distância</span>
               </div>
               <div className="text-xl font-bold font-mono" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
-                {workoutData.distanceKm} <span className="text-xs font-sans opacity-75">km</span>
+                {Number(workoutData.distanceKm || 0).toFixed(1)} <span className="text-xs font-sans opacity-75">km</span>
               </div>
             </div>
 
@@ -117,7 +117,7 @@ export default function WorkoutSummaryModal({
                 <span className={isRose ? 'text-purple-300 font-semibold' : 'text-slate-400'}>Calorias</span>
               </div>
               <div className="text-xl font-bold font-mono" style={{ color: isRose ? '#9400D3' : '#fbbf24' }}>
-                {workoutData.caloriesKcal} <span className="text-xs font-sans opacity-75">kcal</span>
+                {Number(workoutData.caloriesKcal || 0).toFixed(1)} <span className="text-xs font-sans opacity-75">kcal</span>
               </div>
             </div>
 
@@ -129,10 +129,10 @@ export default function WorkoutSummaryModal({
                 <span className={isRose ? 'text-pink-300 font-semibold' : 'text-slate-400'}>Velocidade Média</span>
               </div>
               <div className="text-xl font-bold font-mono" style={{ color: isRose ? '#ff2d75' : '#38bdf8' }}>
-                {workoutData.avgSpeed} <span className="text-xs font-sans opacity-75">km/h</span>
+                {Number(workoutData.avgSpeed || 0).toFixed(1)} <span className="text-xs font-sans opacity-75">km/h</span>
               </div>
               <div className={`text-[10px] mt-0.5 ${isRose ? 'text-pink-300/80' : 'text-slate-500'}`}>
-                Pico: {workoutData.maxSpeed} km/h
+                Pico: {Number(workoutData.maxSpeed || 0).toFixed(1)} km/h
               </div>
             </div>
 
@@ -144,10 +144,10 @@ export default function WorkoutSummaryModal({
                 <span className={isRose ? 'text-purple-300 font-semibold' : 'text-slate-400'}>Cadência Média</span>
               </div>
               <div className="text-xl font-bold font-mono" style={{ color: isRose ? '#9400D3' : '#10b981' }}>
-                {workoutData.avgCadence} <span className="text-xs font-sans opacity-75">RPM</span>
+                {Number(workoutData.avgCadence || 0).toFixed(1)} <span className="text-xs font-sans opacity-75">RPM</span>
               </div>
               <div className={`text-[10px] mt-0.5 ${isRose ? 'text-purple-300/80' : 'text-slate-500'}`}>
-                Pico: {workoutData.maxCadence} RPM
+                Pico: {Number(workoutData.maxCadence || 0).toFixed(1)} RPM
               </div>
             </div>
           </div>

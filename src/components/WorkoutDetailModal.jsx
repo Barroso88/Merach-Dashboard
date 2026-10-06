@@ -90,7 +90,7 @@ export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete,
                 <MapPin className="w-3.5 h-3.5" style={{ color: isRose ? '#ff2d75' : '#10b981' }} /> Distância
               </span>
               <div className="text-xl font-bold font-mono" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
-                {workout.distanceKm} <span className="text-xs font-sans opacity-75">km</span>
+                {Number(workout.distanceKm || 0).toFixed(1)} <span className="text-xs font-sans opacity-75">km</span>
               </div>
             </div>
 
@@ -101,7 +101,7 @@ export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete,
                 <Flame className="w-3.5 h-3.5" style={{ color: isRose ? '#9400D3' : '#fbbf24' }} /> Calorias
               </span>
               <div className="text-xl font-bold font-mono" style={{ color: isRose ? '#9400D3' : '#fbbf24' }}>
-                {workout.caloriesKcal} <span className="text-xs font-sans opacity-75">kcal</span>
+                {Number(workout.caloriesKcal || 0).toFixed(1)} <span className="text-xs font-sans opacity-75">kcal</span>
               </div>
             </div>
 
@@ -112,9 +112,9 @@ export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete,
                 <TrendingUp className="w-3.5 h-3.5" style={{ color: isRose ? '#ff2d75' : '#38bdf8' }} /> Vel. Média
               </span>
               <div className="text-xl font-bold font-mono" style={{ color: isRose ? '#ff2d75' : '#38bdf8' }}>
-                {workout.avgSpeed} <span className="text-xs font-sans opacity-75">km/h</span>
+                {Number(workout.avgSpeed || 0).toFixed(1)} <span className="text-xs font-sans opacity-75">km/h</span>
               </div>
-              <div className={`text-[10px] ${isRose ? 'text-pink-300/80' : 'text-slate-500'}`}>Pico: {workout.maxSpeed} km/h</div>
+              <div className={`text-[10px] ${isRose ? 'text-pink-300/80' : 'text-slate-500'}`}>Pico: {Number(workout.maxSpeed || 0).toFixed(1)} km/h</div>
             </div>
           </div>
 
@@ -124,7 +124,7 @@ export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete,
           }`}>
             <span className={`text-xs ${isRose ? 'text-pink-200' : 'text-slate-400'}`}>Cadência Média / Pico:</span>
             <span className="text-xs font-bold font-mono" style={{ color: isRose ? '#9400D3' : '#10b981' }}>
-              {workout.avgCadence} / {workout.maxCadence} RPM
+              {Number(workout.avgCadence || 0).toFixed(1)} / {Number(workout.maxCadence || 0).toFixed(1)} RPM
             </span>
           </div>
 
