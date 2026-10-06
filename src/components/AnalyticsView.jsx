@@ -12,7 +12,14 @@ import {
   PlusCircle,
   Edit3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  TrendingUp,
+  Activity,
+  Bike,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X
 } from 'lucide-react';
 import WorkoutEditModal from './WorkoutEditModal';
 import {
@@ -39,6 +46,8 @@ export default function AnalyticsView({
   const [metricTab, setMetricTab] = useState('distance'); // 'distance', 'calories', 'speed'
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState(null);
+  const [sortField, setSortField] = useState('date'); // 'date', 'distance', 'duration', 'calories', 'speed', 'cadence'
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc', 'desc'
 
   // Selected month for calendar view (defaults to current month)
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -142,23 +151,79 @@ export default function AnalyticsView({
       ? Number((filteredWorkouts.reduce((sum, w) => sum + (Number(w.avgCadence) || 0), 0) / totalCount).toFixed(1))
       : 0;
 
-    const formatTotalTime = (secs) => {
+    const avgDistancePerWorkout = totalCount > 0
+      ? Number((totalDistance / totalCount).toFixed(1))
+      : 0;
+
+    const avgCaloriesPerWorkout = totalCount > 0
+      ? Number((totalCalories / totalCount).toFixed(1))
+      : 0;
+
+    const avgDurationSeconds = totalCount > 0
+      ? Math.floor(totalDurationSeconds / totalCount)
+      : 0;
+
+    const formatPreciseTime = (secs) => {
+      if (!secs || secs <= 0) return '0m 00s';
       const h = Math.floor(secs / 3600);
       const m = Math.floor((secs % 3600) / 60);
-      if (h > 0) return `${h}h ${m}m`;
-      return `${m}m`;
+      const s = Math.floor(secs % 60);
+      if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+      return `${m}m ${String(s).padStart(2, '0')}s`;
     };
 
     return {
       totalCount,
-      totalTimeFormatted: formatTotalTime(totalDurationSeconds),
+      totalDurationSeconds,
+      totalTimeFormatted: formatPreciseTime(totalDurationSeconds),
+      avgTimeFormatted: formatPreciseTime(avgDurationSeconds),
       totalDistance,
       totalCalories,
+      avgDistancePerWorkout,
+      avgCaloriesPerWorkout,
       avgSpeed,
       maxSpeedRecorded,
       avgCadence
     };
   }, [filteredWorkouts]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const sortedWorkouts = useMemo(() => {
+    return [...filteredWorkouts].sort((a, b) => {
+      let valA, valB;
+      if (sortField === 'date') {
+        valA = new Date(a.date).getTime() || 0;
+        valB = new Date(b.date).getTime() || 0;
+      } else if (sortField === 'distance') {
+        valA = Number(a.distanceKm) || 0;
+        valB = Number(b.distanceKm) || 0;
+      } else if (sortField === 'duration') {
+        valA = Number(a.durationSeconds) || 0;
+        valB = Number(b.durationSeconds) || 0;
+      } else if (sortField === 'calories') {
+        valA = Number(a.caloriesKcal) || 0;
+        valB = Number(b.caloriesKcal) || 0;
+      } else if (sortField === 'speed') {
+        valA = Number(a.avgSpeed) || 0;
+        valB = Number(b.avgSpeed) || 0;
+      } else if (sortField === 'cadence') {
+        valA = Number(a.avgCadence) || 0;
+        valB = Number(b.avgCadence) || 0;
+      } else {
+        valA = 0;
+        valB = 0;
+      }
+      return sortOrder === 'desc' ? valB - valA : valA - valB;
+    });
+  }, [filteredWorkouts, sortField, sortOrder]);
 
   // Chart data formatted into 28-31 daily calendar columns for the selected month
   const chartData = useMemo(() => {
@@ -343,10 +408,10 @@ export default function AnalyticsView({
         </div>
       </div>
 
-      {/* Statistical Summary Cards for Selected Period */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      {/* Statistical Summary Cards for Selected Period - 6-Card Executive Cockpit Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
         {/* Total Workouts */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between ${
+        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-sky-500/40 ${
           isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
         }`}>
           <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
@@ -357,14 +422,14 @@ export default function AnalyticsView({
               <Calendar className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-black font-mono text-white">
+          <div className="text-2xl lg:text-3xl font-black font-mono text-white">
             {stats.totalCount}
           </div>
           <span className={`text-[10px] mt-1 ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>Sessões realizadas</span>
         </div>
 
         {/* Total Time */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between ${
+        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-indigo-500/40 ${
           isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
         }`}>
           <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
@@ -375,46 +440,92 @@ export default function AnalyticsView({
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-black font-mono" style={{ color: isRose ? '#ff85b3' : '#a5b4fc' }}>
+          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff85b3' : '#a5b4fc' }}>
             {stats.totalTimeFormatted}
           </div>
-          <span className={`text-[10px] mt-1 ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`}>Tempo acumulado</span>
+          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`} title={`Média: ${stats.avgTimeFormatted}`}>
+            Média: {stats.avgTimeFormatted}
+          </span>
         </div>
 
         {/* Total Distance */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between ${
+        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-emerald-500/40 ${
           isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
         }`}>
           <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Distância Total</span>
+            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Distância</span>
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
               isRose ? 'bg-[#ff2d75]/20 text-[#ff2d75]' : 'bg-emerald-500/10 text-emerald-400'
             }`}>
               <MapPin className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-black font-mono" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
+          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
             {Number(stats.totalDistance || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">km</span>
           </div>
-          <span className={`text-[10px] mt-1 ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>Quilómetros percorridos</span>
+          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>
+            Média: {stats.avgDistancePerWorkout} km/treino
+          </span>
         </div>
 
         {/* Total Calories */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between ${
+        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-amber-500/40 ${
           isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
         }`}>
           <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Calorias Totais</span>
+            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Calorias</span>
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
               isRose ? 'bg-[#9400D3]/25 text-[#9400D3]' : 'bg-amber-500/10 text-amber-400'
             }`}>
               <Flame className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-black font-mono" style={{ color: isRose ? '#9400D3' : '#fbbf24' }}>
+          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#9400D3' : '#fbbf24' }}>
             {Number(stats.totalCalories || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">kcal</span>
           </div>
-          <span className={`text-[10px] mt-1 ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`}>Gasto calórico total</span>
+          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`}>
+            Média: {stats.avgCaloriesPerWorkout} kcal/treino
+          </span>
+        </div>
+
+        {/* Average Speed */}
+        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-cyan-500/40 ${
+          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
+        }`}>
+          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
+            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Velocidade Média</span>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+              isRose ? 'bg-[#ff2d75]/20 text-[#ff85b3]' : 'bg-cyan-500/10 text-cyan-400'
+            }`}>
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff85b3' : '#38bdf8' }}>
+            {Number(stats.avgSpeed || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">km/h</span>
+          </div>
+          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>
+            Pico: {Number(stats.maxSpeedRecorded || 0).toFixed(1)} km/h
+          </span>
+        </div>
+
+        {/* Average Cadence */}
+        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-emerald-500/40 ${
+          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
+        }`}>
+          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
+            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Cadência Média</span>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+              isRose ? 'bg-[#9400D3]/20 text-purple-300' : 'bg-emerald-500/10 text-emerald-400'
+            }`}>
+              <Activity className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff2d75' : '#34d399' }}>
+            {Number(stats.avgCadence || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">RPM</span>
+          </div>
+          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`}>
+            Ritmo sustentado
+          </span>
         </div>
       </div>
 
@@ -821,7 +932,7 @@ export default function AnalyticsView({
           <div className="flex items-center gap-4 flex-wrap">
             <div>
               <span className="text-slate-500">Dias com Treino: </span>
-              <strong className="text-white font-mono">{monthlyStats.activeDays}</strong> de {daysInMonth} dias ({Math.round((monthlyStats.activeDays / daysInMonth) * 100)}%)
+              <strong className="text-white font-mono">{monthlyStats.activeDays}</strong> de {daysInMonth} dias ({((monthlyStats.activeDays / daysInMonth) * 100).toFixed(1)}%)
             </div>
             <div>
               <span className="text-slate-500">Média por Sessão: </span>
@@ -836,52 +947,182 @@ export default function AnalyticsView({
         </div>
       </div>
 
-      {/* Detailed Workout History Table */}
-      <div className="glass-panel rounded-3xl p-6 border border-slate-800/80">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
-          <div>
-            <h3 className="text-base font-bold text-white tracking-wide">
-              Tabela de Histórico Detalhado
-            </h3>
-            <p className="text-xs text-slate-400">Lista completa das tuas sessões na bicicleta Merach</p>
+      {/* Detailed Workout History Table - Cockpit Pro Edition */}
+      <div className={`rounded-3xl p-6 border shadow-xl ${
+        isRose ? 'bg-[#24042e]/85 border-[#ff2d75]/35' : 'glass-panel border-slate-800/80'
+      }`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${
+              isRose ? 'bg-[#ff2d75]/20 border-[#ff2d75]/40 text-[#ff85b3]' : 'bg-sky-500/15 border-sky-500/30 text-sky-400'
+            }`}>
+              <Bike className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-white tracking-wide">
+                  Tabela de Histórico Detalhado
+                </h3>
+                <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border font-mono ${
+                  isRose ? 'bg-[#ff2d75]/20 border-[#ff2d75]/40 text-pink-200' : 'bg-sky-500/20 border-sky-500/40 text-sky-300'
+                }`}>
+                  {sortedWorkouts.length} {sortedWorkouts.length === 1 ? 'registo' : 'registos'}
+                </span>
+              </div>
+              <p className={`text-xs mt-0.5 ${isRose ? 'text-pink-200/70' : 'text-slate-400'}`}>
+                Lista completa com ordenação dinâmica e métricas com precisão de 1 casa decimal
+              </p>
+            </div>
           </div>
 
-          {/* Search box */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          {/* Search box with Clear action */}
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Pesquisar por título..."
+              placeholder="Pesquisar por título ou data..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+              className={`w-full rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-all ${
+                isRose 
+                  ? 'bg-[#1b0222]/90 border border-[#ff2d75]/30 focus:border-[#ff2d75] focus:ring-1 focus:ring-[#ff2d75]/40' 
+                  : 'bg-slate-900/90 border border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/40'
+              }`}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white rounded-md transition-colors"
+                title="Limpar pesquisa"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Responsive Table */}
+        {/* Responsive Cockpit Table */}
         <div className="overflow-x-auto -mx-6 px-6">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-4 font-semibold">Treino / Data</th>
-                <th className="py-3 px-4 font-semibold">Duração</th>
-                <th className="py-3 px-4 font-semibold">Velocidade Média</th>
-                <th className="py-3 px-4 font-semibold">Cadência Média</th>
-                <th className="py-3 px-4 font-semibold">Distância</th>
-                <th className="py-3 px-4 font-semibold">Calorias</th>
-                <th className="py-3 px-4 font-semibold text-right">Ações</th>
+              <tr className={`border-b text-slate-400 uppercase tracking-wider text-[11px] ${
+                isRose ? 'border-[#ff2d75]/25 bg-[#200329]/60' : 'border-slate-800/90 bg-slate-900/40'
+              }`}>
+                {/* Date / Title */}
+                <th className="py-3.5 px-4 font-semibold">
+                  <button
+                    onClick={() => handleSort('date')}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors group cursor-pointer"
+                  >
+                    <span>Treino / Data</span>
+                    {sortField === 'date' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-sky-400" /> : <ArrowDown className="w-3.5 h-3.5 text-sky-400" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </th>
+
+                {/* Duration */}
+                <th className="py-3.5 px-4 font-semibold">
+                  <button
+                    onClick={() => handleSort('duration')}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors group cursor-pointer"
+                  >
+                    <span>Duração</span>
+                    {sortField === 'duration' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-sky-400" /> : <ArrowDown className="w-3.5 h-3.5 text-sky-400" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </th>
+
+                {/* Distance */}
+                <th className="py-3.5 px-4 font-semibold">
+                  <button
+                    onClick={() => handleSort('distance')}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors group cursor-pointer"
+                  >
+                    <span>Distância</span>
+                    {sortField === 'distance' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-emerald-400" /> : <ArrowDown className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </th>
+
+                {/* Speed */}
+                <th className="py-3.5 px-4 font-semibold">
+                  <button
+                    onClick={() => handleSort('speed')}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors group cursor-pointer"
+                  >
+                    <span>Velocidade</span>
+                    {sortField === 'speed' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-cyan-400" /> : <ArrowDown className="w-3.5 h-3.5 text-cyan-400" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </th>
+
+                {/* Cadence */}
+                <th className="py-3.5 px-4 font-semibold">
+                  <button
+                    onClick={() => handleSort('cadence')}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors group cursor-pointer"
+                  >
+                    <span>Cadência</span>
+                    {sortField === 'cadence' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-emerald-400" /> : <ArrowDown className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </th>
+
+                {/* Calories */}
+                <th className="py-3.5 px-4 font-semibold">
+                  <button
+                    onClick={() => handleSort('calories')}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors group cursor-pointer"
+                  >
+                    <span>Calorias</span>
+                    {sortField === 'calories' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-amber-400" /> : <ArrowDown className="w-3.5 h-3.5 text-amber-400" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </button>
+                </th>
+
+                {/* Actions */}
+                <th className="py-3.5 px-4 font-semibold text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {filteredWorkouts.length === 0 ? (
+            <tbody className="divide-y divide-slate-800/40">
+              {sortedWorkouts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
-                    Nenhum treino encontrado com os filtros selecionados.
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Bike className="w-8 h-8 opacity-30 text-slate-400" />
+                      <p className="text-sm font-medium">Nenhum treino encontrado com os filtros selecionados.</p>
+                      {searchTerm && (
+                        <button
+                          onClick={() => setSearchTerm('')}
+                          className="mt-1 text-xs text-sky-400 hover:underline cursor-pointer"
+                        >
+                          Limpar filtro de pesquisa
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredWorkouts.map((workout) => {
+                sortedWorkouts.map((workout) => {
                   const d = new Date(workout.date);
                   const dateStr = d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
                   const timeStr = d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
@@ -889,40 +1130,89 @@ export default function AnalyticsView({
                   return (
                     <tr
                       key={workout.id}
-                      className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                      className={`transition-colors group cursor-pointer ${
+                        isRose ? 'hover:bg-[#ff2d75]/10' : 'hover:bg-slate-800/50'
+                      }`}
                       onClick={() => onSelectWorkout(workout)}
                     >
+                      {/* Title & Date */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-white text-sm group-hover:text-sky-300 transition-colors">
-                          {workout.title}
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 transition-transform group-hover:scale-105 ${
+                            isRose ? 'bg-[#ff2d75]/15 border-[#ff2d75]/30 text-[#ff85b3]' : 'bg-slate-800 border-slate-700 text-sky-400'
+                          }`}>
+                            <Bike className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-white text-sm group-hover:text-sky-300 transition-colors">
+                              {workout.title}
+                            </div>
+                            <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                              <span className="font-mono">{dateStr}</span>
+                              <span className="text-slate-600">•</span>
+                              <span className="font-mono text-slate-500">{timeStr}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
-                          {dateStr} às {timeStr}
+                      </td>
+
+                      {/* Duration */}
+                      <td className="py-3.5 px-4 font-mono font-medium">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+                          <Clock className="w-3 h-3 text-indigo-400" />
+                          <span>{formatRowTime(workout.durationSeconds)}</span>
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-300">
-                        {formatRowTime(workout.durationSeconds)}
-                      </td>
-
+                      {/* Distance */}
                       <td className="py-3.5 px-4 font-mono">
-                        <span className="font-bold text-sky-400">{Number(workout.avgSpeed || 0).toFixed(1)} km/h</span>
-                        <span className="text-[10px] text-slate-500 block">Pico: {Number(workout.maxSpeed || 0).toFixed(1)} km/h</span>
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold ${
+                          isRose
+                            ? 'bg-[#ff2d75]/10 border-[#ff2d75]/25 text-[#ff2d75]'
+                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                        }`}>
+                          <MapPin className="w-3 h-3" />
+                          <span>{Number(workout.distanceKm || 0).toFixed(1)} <span className="font-sans text-[10px] font-normal opacity-80">km</span></span>
+                        </div>
                       </td>
 
+                      {/* Speed */}
                       <td className="py-3.5 px-4 font-mono">
-                        <span className="font-bold text-emerald-400">{Number(workout.avgCadence || 0).toFixed(1)} RPM</span>
-                        <span className="text-[10px] text-slate-500 block">Pico: {Number(workout.maxCadence || 0).toFixed(1)} RPM</span>
+                        <div className="flex flex-col">
+                          <span className={`font-bold ${isRose ? 'text-[#ff85b3]' : 'text-sky-400'}`}>
+                            {Number(workout.avgSpeed || 0).toFixed(1)} <span className="font-sans text-[10px] font-normal text-slate-500">km/h</span>
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            Pico: {Number(workout.maxSpeed || 0).toFixed(1)} km/h
+                          </span>
+                        </div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono font-bold text-white">
-                        {Number(workout.distanceKm || 0).toFixed(1)} <span className="font-sans text-[10px] text-slate-400 font-normal">km</span>
+                      {/* Cadence */}
+                      <td className="py-3.5 px-4 font-mono">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-emerald-400">
+                            {Number(workout.avgCadence || 0).toFixed(1)} <span className="font-sans text-[10px] font-normal text-slate-500">RPM</span>
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            Pico: {Number(workout.maxCadence || 0).toFixed(1)} RPM
+                          </span>
+                        </div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono font-bold text-amber-400">
-                        {Number(workout.caloriesKcal || 0).toFixed(1)} <span className="font-sans text-[10px] text-slate-400 font-normal">kcal</span>
+                      {/* Calories */}
+                      <td className="py-3.5 px-4 font-mono">
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold ${
+                          isRose
+                            ? 'bg-[#9400D3]/15 border-[#9400D3]/30 text-purple-300'
+                            : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                        }`}>
+                          <Flame className="w-3 h-3" />
+                          <span>{Number(workout.caloriesKcal || 0).toFixed(1)} <span className="font-sans text-[10px] font-normal opacity-80">kcal</span></span>
+                        </div>
                       </td>
 
+                      {/* Actions */}
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
@@ -962,6 +1252,35 @@ export default function AnalyticsView({
             </tbody>
           </table>
         </div>
+
+        {/* Aggregate Summary Footer */}
+        {sortedWorkouts.length > 0 && (
+          <div className={`mt-4 pt-3.5 border-t flex flex-wrap items-center justify-between gap-3 text-xs ${
+            isRose ? 'border-[#ff2d75]/20 text-pink-200/70' : 'border-slate-800/90 text-slate-400'
+          }`}>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div>
+                <span className="text-slate-500">Total Exibido: </span>
+                <strong className="text-white font-mono">{sortedWorkouts.length}</strong> treinos
+              </div>
+              <div>
+                <span className="text-slate-500">Distância Total: </span>
+                <strong className="text-emerald-400 font-mono">
+                  {sortedWorkouts.reduce((acc, w) => acc + (Number(w.distanceKm) || 0), 0).toFixed(1)} km
+                </strong>
+              </div>
+              <div>
+                <span className="text-slate-500">Calorias Totais: </span>
+                <strong className="text-amber-400 font-mono">
+                  {sortedWorkouts.reduce((acc, w) => acc + (Number(w.caloriesKcal) || 0), 0).toFixed(1)} kcal
+                </strong>
+              </div>
+            </div>
+            <div className="text-[11px] text-slate-500">
+              Clica nas colunas para ordenar • Clica numa linha para ver a telemetria detalhada
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal para Adicionar / Editar Treino */}
