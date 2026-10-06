@@ -21,6 +21,8 @@ import {
   fetchServerWorkouts
 } from './services/storageService';
 import { fetchServerCustomRoutes } from './services/routePlannerService';
+import { wakeLockService } from './services/wakeLockService';
+import { globalWorkerTimer } from './services/workerTimer';
 import { THEMES } from './constants/themes';
 import { ChevronDown } from 'lucide-react';
 
@@ -115,56 +117,123 @@ export default function App() {
   // Samples recorded throughout the entire session
   const sessionSamplesRef = useRef([]);
 
-  // Telemetry loop effect
-  // Telemetry loop effect (500ms high-refresh sampling rate for ultra-low latency!)
+  // Wall-clock timestamp tracking for bulletproof background & tablet sleep resilience
+  const workoutStartTimeRef = useRef(null);
+  const accumulatedPausedTimeRef = useRef(0);
+  const lastPauseTimestampRef = useRef(null);
+  const lastTickTimeRef = useRef(null);
+  const lastTelemetryRef = useRef({ speed: 0, cadence: 0 });
+  const lastRecordedSecRef = useRef(0);
+
+  // Screen Wake Lock manager for tablets and mobile devices
   useEffect(() => {
-    let timer = null;
-    let tickCount = 0;
+    if (activeTab === 'live' && settings.keepScreenAwake !== false) {
+      wakeLockService.requestWakeLock();
+    } else if (activeTab !== 'live' && workoutStatus === 'idle') {
+      wakeLockService.releaseWakeLock();
+    }
+  }, [activeTab, settings.keepScreenAwake, workoutStatus]);
+
+  // Page Visibility handler: immediately catches up wall-clock time & re-acquires Wake Lock
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (typeof document === 'undefined') return;
+
+      if (document.visibilityState === 'visible') {
+        // 1. Re-acquire Screen Wake Lock when screen wakes up or returning to app
+        if (settings.keepScreenAwake !== false && activeTab === 'live') {
+          wakeLockService.requestWakeLock();
+        }
+
+        // 2. If workout is running, calculate immediate wall-clock catch up
+        if (workoutStatus === 'running' && workoutStartTimeRef.current) {
+          const now = Date.now();
+          const start = workoutStartTimeRef.current;
+          const paused = accumulatedPausedTimeRef.current || 0;
+          const currentElapsed = Math.max(0, Math.floor((now - start - paused) / 1000));
+          setElapsedSeconds(currentElapsed);
+
+          const lastTick = lastTickTimeRef.current || now;
+          const actualDt = Math.max(0.05, (now - lastTick) / 1000);
+          lastTickTimeRef.current = now;
+
+          const mins = Math.floor(currentElapsed / 60);
+          const secs = currentElapsed % 60;
+          const timeLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+          if (settings.mode === 'homeassistant') {
+            haServiceRef.current.fetchTelemetry()
+              .then((data) => {
+                applyTick(data, actualDt, true, currentElapsed, timeLabel);
+              })
+              .catch(() => {});
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [workoutStatus, settings.keepScreenAwake, settings.mode, activeTab]);
+
+  // Telemetry loop effect with WorkerTimer (background-safe, zero throttling)
+  useEffect(() => {
+    let isSubscribed = true;
 
     if (workoutStatus === 'running') {
-      timer = setInterval(async () => {
-        tickCount += 1;
-        const isFullSecond = tickCount % 2 === 0;
+      globalWorkerTimer.start(500, async () => {
+        if (!isSubscribed) return;
 
-        let nextSec = 0;
+        const now = Date.now();
+        const start = workoutStartTimeRef.current || now;
+        const paused = accumulatedPausedTimeRef.current || 0;
+        const currentElapsed = Math.max(0, Math.floor((now - start - paused) / 1000));
+        setElapsedSeconds(currentElapsed);
+
+        const lastTick = lastTickTimeRef.current || now;
+        const actualDt = Math.max(0.05, (now - lastTick) / 1000);
+        lastTickTimeRef.current = now;
+
+        const isFullSecond = currentElapsed !== lastRecordedSecRef.current;
         let timeLabel = '';
-
         if (isFullSecond) {
-          setElapsedSeconds((prev) => {
-            const updated = prev + 1;
-            nextSec = updated;
-            const mins = Math.floor(updated / 60);
-            const secs = updated % 60;
-            timeLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+          lastRecordedSecRef.current = currentElapsed;
+          const mins = Math.floor(currentElapsed / 60);
+          const secs = currentElapsed % 60;
+          timeLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
-            // Check if target countdown completed
-            if (targetSeconds > 0 && updated >= targetSeconds) {
-              setIsTargetReached(true);
-            }
-            return updated;
-          });
+          // Check if target countdown completed
+          if (targetSeconds > 0 && currentElapsed >= targetSeconds) {
+            setIsTargetReached(true);
+          }
         }
 
         if (settings.mode === 'homeassistant') {
           haServiceRef.current.fetchTelemetry()
             .then((data) => {
-              applyTick(data, 0.5, isFullSecond, nextSec, timeLabel);
+              if (isSubscribed) {
+                applyTick(data, actualDt, isFullSecond, currentElapsed, timeLabel);
+              }
             })
             .catch(() => {
-              const currentTick = simulatorRef.current.nextTick(false);
-              applyTick(currentTick, 0.5, isFullSecond, nextSec, timeLabel);
+              if (isSubscribed) {
+                const currentTick = simulatorRef.current.nextTick(false);
+                applyTick(currentTick, actualDt, isFullSecond, currentElapsed, timeLabel);
+              }
             });
         } else {
           const currentTick = simulatorRef.current.nextTick(false);
-          applyTick(currentTick, 0.5, isFullSecond, nextSec, timeLabel);
+          applyTick(currentTick, actualDt, isFullSecond, currentElapsed, timeLabel);
         }
-      }, 500);
+      });
     } else if (workoutStatus === 'idle') {
-      // In IDLE/Standby: read live bike sensors every 500ms so gauges react instantly!
+      globalWorkerTimer.stop();
       if (settings.mode === 'homeassistant') {
-        timer = setInterval(async () => {
+        globalWorkerTimer.start(500, async () => {
+          if (!isSubscribed) return;
           haServiceRef.current.fetchTelemetry()
             .then((data) => {
+              if (!isSubscribed) return;
               const liveCadence = data.cadence ?? 0;
               const liveSpeed = data.speed ?? 0;
               setTelemetry({
@@ -181,13 +250,16 @@ export default function App() {
               }
             })
             .catch(() => {});
-        }, 500);
+        });
       }
     } else if (workoutStatus === 'paused') {
-      timer = setInterval(() => {
+      globalWorkerTimer.stop();
+      globalWorkerTimer.start(500, async () => {
+        if (!isSubscribed) return;
         if (settings.mode === 'homeassistant') {
           haServiceRef.current.fetchTelemetry()
             .then((data) => {
+              if (!isSubscribed) return;
               setTelemetry({
                 cadence: data.cadence ?? 0,
                 speed: data.speed ?? 0,
@@ -201,11 +273,12 @@ export default function App() {
           const coolTick = simulatorRef.current.nextTick(true);
           setTelemetry(coolTick);
         }
-      }, 500);
+      });
     }
 
     return () => {
-      if (timer) clearInterval(timer);
+      isSubscribed = false;
+      globalWorkerTimer.stop();
     };
   }, [workoutStatus, settings.mode, targetSeconds]);
 
@@ -217,7 +290,7 @@ export default function App() {
     }
   }, [isTargetReached, workoutStatus]);
 
-  // Apply tick data to session aggregates (supports 0.5s sub-second integration)
+  // Apply tick data to session aggregates (supports variable dt wall-clock integration)
   const applyTick = (tick, dt = 0.5, isFullSecond = false, currentSec = 0, timeLabel = '') => {
     setTelemetry({
       cadence: tick.cadence ?? 0,
@@ -255,19 +328,29 @@ export default function App() {
     // Update cumulative metrics according to official indoor bike formula with dt factor
     setSessionStats((prev) => {
       const speedKmH = Number(tick.speed) || 0;
-      const distIncrement = (speedKmH / 3600) * dt;
-      
       const cadenceRpm = Number(tick.cadence) || 0;
-      const calIncrement = (((speedKmH * 0.22) + (cadenceRpm * 0.05)) / 60) * dt;
-      
-      // Session distance accumulates with continuous float precision
+
+      // When recovering from a background interval, average speeds across the interval
+      const effectiveSpeed = (lastTelemetryRef.current.speed > 0 && speedKmH > 0)
+        ? (lastTelemetryRef.current.speed + speedKmH) / 2
+        : speedKmH;
+      const effectiveCadence = (lastTelemetryRef.current.cadence > 0 && cadenceRpm > 0)
+        ? Math.round((lastTelemetryRef.current.cadence + cadenceRpm) / 2)
+        : cadenceRpm;
+
+      const distIncrement = (effectiveSpeed / 3600) * dt;
+      const calIncrement = (((effectiveSpeed * 0.22) + (effectiveCadence * 0.05)) / 60) * dt;
+
+      lastTelemetryRef.current = { speed: speedKmH, cadence: cadenceRpm };
+
       const newDistance = prev.distanceKm + distIncrement;
       const newCalories = prev.caloriesKcal + calIncrement;
 
-      const count = prev.samplesCount + 1;
-      const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + speedKmH) / count).toFixed(1));
+      const weight = Math.max(1, Math.round(dt * 2));
+      const count = prev.samplesCount + weight;
+      const newAvgSpeed = Number((((prev.avgSpeed * prev.samplesCount) + (effectiveSpeed * weight)) / count).toFixed(1));
       const newMaxSpeed = Math.max(prev.maxSpeed, speedKmH);
-      const newAvgCadence = Math.round(((prev.avgCadence * prev.samplesCount) + cadenceRpm) / count);
+      const newAvgCadence = Math.round(((prev.avgCadence * prev.samplesCount) + (effectiveCadence * weight)) / count);
       const newMaxCadence = Math.max(prev.maxCadence, cadenceRpm);
 
       return {
@@ -284,30 +367,68 @@ export default function App() {
 
   // Workout Controls Handlers
   const handleStartWorkout = () => {
+    const now = Date.now();
+    workoutStartTimeRef.current = now;
+    accumulatedPausedTimeRef.current = 0;
+    lastPauseTimestampRef.current = null;
+    lastTickTimeRef.current = now;
+    lastRecordedSecRef.current = 0;
+    setElapsedSeconds(0);
     setWorkoutStatus('running');
     setIsNavbarCollapsed(true);
     sessionSamplesRef.current = [];
+
+    if (settings.keepScreenAwake !== false) {
+      wakeLockService.requestWakeLock();
+    }
+    if (settings.preventBackgroundSuspension !== false) {
+      wakeLockService.enableBackgroundAudio();
+    }
   };
 
   const handlePauseWorkout = () => {
+    lastPauseTimestampRef.current = Date.now();
     setWorkoutStatus('paused');
   };
 
   const handleResumeWorkout = () => {
+    const now = Date.now();
+    if (lastPauseTimestampRef.current) {
+      accumulatedPausedTimeRef.current += (now - lastPauseTimestampRef.current);
+      lastPauseTimestampRef.current = null;
+    }
+    lastTickTimeRef.current = now;
     setWorkoutStatus('running');
     setIsNavbarCollapsed(true);
+
+    if (settings.keepScreenAwake !== false) {
+      wakeLockService.requestWakeLock();
+    }
+    if (settings.preventBackgroundSuspension !== false) {
+      wakeLockService.enableBackgroundAudio();
+    }
   };
 
   const handleStopWorkout = () => {
+    const now = Date.now();
+    let finalDuration = elapsedSeconds;
+    if (workoutStartTimeRef.current) {
+      const paused = accumulatedPausedTimeRef.current || 0;
+      finalDuration = Math.max(0, Math.floor((now - workoutStartTimeRef.current - paused) / 1000));
+    }
+
     setWorkoutStatus('idle');
     setIsNavbarCollapsed(false);
+
+    wakeLockService.releaseWakeLock();
+    wakeLockService.disableBackgroundAudio();
 
     // Build finished workout summary
     const summary = {
       id: `wo-${Date.now()}`,
       title: 'Treino Merach Bike',
       date: new Date().toISOString(),
-      durationSeconds: elapsedSeconds,
+      durationSeconds: finalDuration,
       distanceKm: Number((sessionStats.distanceKm || 0).toFixed(2)),
       caloriesKcal: Math.round(sessionStats.caloriesKcal || 0),
       avgSpeed: sessionStats.avgSpeed,
@@ -324,9 +445,16 @@ export default function App() {
   };
 
   const handleResetWorkout = () => {
+    workoutStartTimeRef.current = null;
+    accumulatedPausedTimeRef.current = 0;
+    lastPauseTimestampRef.current = null;
+    lastTickTimeRef.current = null;
+    lastRecordedSecRef.current = 0;
     setWorkoutStatus('idle');
     setIsNavbarCollapsed(false);
     setElapsedSeconds(0);
+    wakeLockService.releaseWakeLock();
+    wakeLockService.disableBackgroundAudio();
     setTelemetry({
       cadence: 0,
       speed: 0

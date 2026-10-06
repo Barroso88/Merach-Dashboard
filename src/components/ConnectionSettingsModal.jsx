@@ -16,7 +16,8 @@ import {
   ChevronUp,
   Shield,
   Camera,
-  Database
+  Database,
+  Sun
 } from 'lucide-react';
 import { DEFAULT_SETTINGS } from '../services/storageService';
 
@@ -846,6 +847,61 @@ export default function ConnectionSettingsModal({
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Tablet & Background Execution Preferences */}
+          <div className={`p-4 rounded-2xl border space-y-4 ${
+            isRose ? 'bg-[#290534]/50 border-[#ff2d75]/30' : 'bg-slate-900/50 border-slate-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sun className={`w-4 h-4 ${isRose ? 'text-[#ff2d75]' : 'text-amber-400'}`} />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Modo Tablet & Segundo Plano (Anti-Suspensão)
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Otimizado para Tablets
+              </span>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              {/* Keep Screen Awake Toggle */}
+              <label className="flex items-start justify-between gap-3 cursor-pointer group">
+                <div>
+                  <span className="text-xs font-bold text-slate-200 block group-hover:text-white transition-colors">
+                    💡 Manter Ecrã Sempre Ligado (Screen Wake Lock)
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5 leading-relaxed">
+                    Impede que o ecrã do tablet ou telemóvel se apague por inatividade durante os treinos.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={formData.keepScreenAwake !== false}
+                  onChange={(e) => setFormData({ ...formData, keepScreenAwake: e.target.checked })}
+                  className="mt-1 w-4 h-4 rounded text-sky-500 bg-slate-800 border-slate-700 focus:ring-sky-500 cursor-pointer"
+                />
+              </label>
+
+              {/* Prevent Background Suspension Toggle */}
+              <label className="flex items-start justify-between gap-3 cursor-pointer group pt-2 border-t border-white/5">
+                <div>
+                  <span className="text-xs font-bold text-slate-200 block group-hover:text-white transition-colors">
+                    ⚡ Manter Contagem Ativa em Segundo Plano / Outras Apps
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5 leading-relaxed">
+                    Utiliza Web Worker e sinal de áudio inaudível (keep-alive) para que a app continue a contar tempo, distância e calorias mesmo se mudar para o YouTube ou Spotify.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={formData.preventBackgroundSuspension !== false}
+                  onChange={(e) => setFormData({ ...formData, preventBackgroundSuspension: e.target.checked })}
+                  className="mt-1 w-4 h-4 rounded text-sky-500 bg-slate-800 border-slate-700 focus:ring-sky-500 cursor-pointer"
+                />
+              </label>
             </div>
           </div>
 

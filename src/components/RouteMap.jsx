@@ -584,6 +584,16 @@ export default function RouteMap({
                         <span className={`w-1 h-1 rounded-full ${currentStatus.dotColor}`} />
                         {currentStatus.label}
                       </div>
+
+                      {workoutStatus === 'running' && (
+                        <div
+                          className="hidden sm:flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-bold border border-amber-500/30 bg-amber-500/10 text-amber-300"
+                          title="Screen Wake Lock ativo: o ecrã não se apaga por inatividade durante o treino"
+                        >
+                          <span>💡</span>
+                          <span>Ecrã Ativo</span>
+                        </div>
+                      )}
                     </div>
                     <div className="text-xl md:text-2xl font-black font-mono tracking-tight text-white leading-tight">
                       {isCountdownMode ? formatTime(remainingSeconds) : formatTime(elapsedSeconds)}

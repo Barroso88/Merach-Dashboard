@@ -282,6 +282,18 @@ export default function WorkoutControls({
                   {currentStatus.label}
                 </div>
 
+                {status === 'running' && (
+                  <div
+                    className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      isRose ? 'bg-[#ff2d75]/15 border-[#ff2d75]/40 text-pink-200' : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                    }`}
+                    title="Screen Wake Lock ativo: o ecrã não se apaga por inatividade durante o treino"
+                  >
+                    <span>💡</span>
+                    <span>Ecrã Ativo</span>
+                  </div>
+                )}
+
                 {isCountdownMode && status !== 'idle' && (
                   <button
                     onClick={() => setDisplayMode(prev => prev === 'countdown' ? 'elapsed' : 'countdown')}

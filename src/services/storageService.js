@@ -86,7 +86,9 @@ export const DEFAULT_SETTINGS = {
     user: 'postgres',
     password: '',
     database: 'merach'
-  }
+  },
+  keepScreenAwake: true,
+  preventBackgroundSuspension: true
 };
 
 export function getStoredSettings() {
