@@ -1,5 +1,6 @@
-import React from 'react';
-import { X, Calendar, Clock, MapPin, Flame, Gauge, TrendingUp, Sliders, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Calendar, Clock, MapPin, Flame, TrendingUp, Trash2, Edit3 } from 'lucide-react';
+import WorkoutEditModal from './WorkoutEditModal';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -10,7 +11,8 @@ import {
   CartesianGrid
 } from 'recharts';
 
-export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete, themeConfig }) {
+export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete, onUpdate, themeConfig }) {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   if (!isOpen || !workout) return null;
 
   const isRose = themeConfig?.id === 'rose';
@@ -184,22 +186,37 @@ export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete,
         <div className={`flex items-center justify-between pt-4 border-t ${
           isRose ? 'border-[#ff2d75]/30' : 'border-slate-800'
         }`}>
-          <button
-            onClick={() => {
-              if (window.confirm('Tens a certeza de que queres eliminar este treino do histórico?')) {
-                onDelete(workout.id);
-                onClose();
-              }
-            }}
-            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-              isRose
-                ? 'bg-[#380743] hover:bg-rose-950/80 border-[#ff2d75]/40 text-[#ff85b3] hover:text-white'
-                : 'bg-rose-500/15 hover:bg-rose-500/25 border-rose-500/30 text-rose-300'
-            }`}
-          >
-            <Trash2 className="w-4 h-4" />
-            Eliminar Registo
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (window.confirm('Tens a certeza de que queres eliminar este treino do histórico?')) {
+                  onDelete(workout.id);
+                  onClose();
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isRose
+                  ? 'bg-[#380743] hover:bg-rose-950/80 border-[#ff2d75]/40 text-[#ff85b3] hover:text-white'
+                  : 'bg-rose-500/15 hover:bg-rose-500/25 border-rose-500/30 text-rose-300'
+              }`}
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Eliminar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(true)}
+              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                isRose
+                  ? 'bg-[#ff2d75]/20 hover:bg-[#ff2d75]/30 border-[#ff2d75]/50 text-white'
+                  : 'bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/40 text-sky-300 hover:text-white'
+              }`}
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Editar Dados</span>
+            </button>
+          </div>
 
           <button
             onClick={onClose}
@@ -212,6 +229,18 @@ export default function WorkoutDetailModal({ workout, isOpen, onClose, onDelete,
             Fechar
           </button>
         </div>
+
+        {/* Modal para Editar Dados do Treino */}
+        <WorkoutEditModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          workout={workout}
+          onSave={(updated) => {
+            if (onUpdate) onUpdate(updated);
+            setIsEditModalOpen(false);
+          }}
+          themeConfig={themeConfig}
+        />
       </div>
     </div>
   );

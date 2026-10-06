@@ -483,6 +483,14 @@ export default function App() {
     setActiveTab('analytics');
   };
 
+  // Save or edit a workout (manual insertion or editing)
+  const handleSaveOrUpdateWorkout = (workout) => {
+    const updated = saveWorkoutToStorage(workout);
+    if (updated) {
+      setWorkouts(updated);
+    }
+  };
+
   const handleDiscardFinishedWorkout = () => {
     setIsSummaryModalOpen(false);
     handleResetWorkout();
@@ -643,6 +651,7 @@ export default function App() {
             themeConfig={activeTheme}
             onDeleteWorkout={handleDeleteWorkout}
             onSelectWorkout={(w) => setSelectedWorkoutDetail(w)}
+            onSaveWorkout={handleSaveOrUpdateWorkout}
           />
         )}
       </main>
@@ -672,6 +681,10 @@ export default function App() {
         themeConfig={activeTheme}
         onClose={() => setSelectedWorkoutDetail(null)}
         onDelete={handleDeleteWorkout}
+        onUpdate={(updated) => {
+          handleSaveOrUpdateWorkout(updated);
+          setSelectedWorkoutDetail(updated);
+        }}
       />
 
       {/* Modal: Settings and Home Assistant Integration */}

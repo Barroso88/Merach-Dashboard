@@ -4,14 +4,15 @@ import {
   Clock,
   MapPin,
   Flame,
-  Gauge,
-  TrendingUp,
   Trash2,
   Eye,
   Download,
   BarChart3,
-  Search
+  Search,
+  PlusCircle,
+  Edit3
 } from 'lucide-react';
+import WorkoutEditModal from './WorkoutEditModal';
 import {
   ResponsiveContainer,
   BarChart,
@@ -27,12 +28,15 @@ export default function AnalyticsView({
   workouts = [],
   onDeleteWorkout,
   onSelectWorkout,
+  onSaveWorkout,
   themeConfig
 }) {
   const isRose = themeConfig?.id === 'rose';
   const [period, setPeriod] = useState('weekly'); // 'daily', 'weekly', 'monthly', 'all'
   const [searchTerm, setSearchTerm] = useState('');
   const [metricTab, setMetricTab] = useState('distance'); // 'distance', 'calories', 'speed'
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState(null);
 
   // Filter workouts by selected period
   const filteredWorkouts = useMemo(() => {
@@ -215,6 +219,23 @@ export default function AnalyticsView({
           >
             <Download className={`w-3.5 h-3.5 ${isRose ? 'text-[#ff2d75]' : 'text-emerald-400'}`} />
             <span className="hidden sm:inline">Exportar CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditingWorkout(null);
+              setIsEditModalOpen(true);
+            }}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md ${
+              isRose
+                ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] hover:opacity-90 text-white shadow-[#ff2d75]/20'
+                : 'bg-gradient-to-r from-sky-500 to-emerald-500 hover:opacity-90 text-slate-950 font-black shadow-sky-500/20'
+            }`}
+            title="Registar manualmente um treino que não tenha ficado gravado"
+          >
+            <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>Adicionar Treino</span>
           </button>
         </div>
       </div>
@@ -551,6 +572,16 @@ export default function AnalyticsView({
                           </button>
                           <button
                             onClick={() => {
+                              setEditingWorkout(workout);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-2 rounded-lg bg-slate-800/80 hover:bg-amber-500/20 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition-colors cursor-pointer"
+                            title="Editar Dados deste Treino"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
                               if (window.confirm(`Eliminar "${workout.title}"?`)) {
                                 onDeleteWorkout(workout.id);
                               }
@@ -570,6 +601,22 @@ export default function AnalyticsView({
           </table>
         </div>
       </div>
+
+      {/* Modal para Adicionar / Editar Treino */}
+      <WorkoutEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingWorkout(null);
+        }}
+        workout={editingWorkout}
+        onSave={(savedWorkout) => {
+          if (onSaveWorkout) onSaveWorkout(savedWorkout);
+          setIsEditModalOpen(false);
+          setEditingWorkout(null);
+        }}
+        themeConfig={themeConfig}
+      />
     </div>
   );
 }

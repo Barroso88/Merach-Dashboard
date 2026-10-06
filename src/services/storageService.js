@@ -32,7 +32,14 @@ export function getStoredWorkouts() {
 export function saveWorkoutToStorage(workout) {
   try {
     const current = getStoredWorkouts();
-    const updated = [workout, ...current];
+    const index = current.findIndex(w => w.id === workout.id);
+    let updated;
+    if (index >= 0) {
+      updated = [...current];
+      updated[index] = { ...current[index], ...workout };
+    } else {
+      updated = [workout, ...current];
+    }
     localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(updated));
     // Asynchronously sync with central server
     syncWorkoutsToServer(updated);
