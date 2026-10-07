@@ -230,7 +230,7 @@ export default function LiveDashboard({
         <div className={`absolute bottom-4 right-4 w-2 h-2 rounded-full border shadow-sm ${isRose ? 'bg-pink-900 border-pink-700/70' : 'bg-slate-600 border-slate-500/70'}`} />
 
         {/* MAIN INTEGRATED CLUSTER: SPEEDOMETER | DIGITAL TELEMETRY CORE (DIST & CAL) | CADENCE */}
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-center justify-items-center relative z-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 lg:gap-6 items-center justify-items-center relative z-10">
           
           {/* 1. MANÓMETRO DE VELOCIDADE (Esquerda) */}
           <div className="lg:col-span-4 w-full flex flex-col items-center justify-center">

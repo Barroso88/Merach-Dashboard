@@ -30,7 +30,7 @@ export default function Navbar({
   const isRose = currentTheme === 'rose';
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3.5 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-3 sm:px-4 lg:px-8 py-3.5 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Brand & Logo */}
         <div className="flex items-center gap-3">
@@ -57,7 +57,7 @@ export default function Navbar({
                 BIKE
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium tracking-wide">
+            <p className="text-[10px] text-slate-400 font-medium tracking-wide hidden sm:block">
               Smart Cycling Telemetry
             </p>
           </div>

@@ -622,7 +622,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className={`flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 relative z-10 transition-all duration-500 ${
-        isNavbarCollapsed && (workoutStatus === 'running' || workoutStatus === 'paused') ? 'pt-10 pb-6' : 'py-6'
+        isNavbarCollapsed && (workoutStatus === 'running' || workoutStatus === 'paused') ? 'pt-10 pb-24 md:pb-6' : 'pt-6 pb-24 md:py-6'
       }`}>
         {activeTab === 'live' ? (
           <LiveDashboard
@@ -656,14 +656,16 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <BottomNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        workoutStatus={workoutStatus}
-        currentTheme={currentTheme}
-      />
+      {/* Mobile Bottom Navigation Bar (Hidden in Fullscreen Route Mode to avoid overlaying map controls) */}
+      {!(dashboardMode === 'route' && activeTab === 'live') && (
+        <BottomNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          workoutStatus={workoutStatus}
+          currentTheme={currentTheme}
+        />
+      )}
 
       {/* Modal: Workout Completion Celebration */}
       <WorkoutSummaryModal

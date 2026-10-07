@@ -357,7 +357,7 @@ export default function AnalyticsView({
             {[
               { id: 'daily', label: 'Diário' },
               { id: 'weekly', label: 'Semanal' },
-              { id: 'monthly', label: `Mensal (${monthName.split(' ')[0]})` },
+              { id: 'monthly', label: 'Mensal' },
               { id: 'all', label: 'Todos' }
             ].map(p => (
               <button
@@ -1004,7 +1004,7 @@ export default function AnalyticsView({
 
         {/* Responsive Cockpit Table */}
         <div className="overflow-x-auto -mx-6 px-6">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
             <thead>
               <tr className={`border-b text-slate-400 uppercase tracking-wider text-[11px] ${
                 isRose ? 'border-[#ff2d75]/25 bg-[#200329]/60' : 'border-slate-800/90 bg-slate-900/40'

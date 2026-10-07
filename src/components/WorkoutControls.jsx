@@ -413,7 +413,7 @@ export default function WorkoutControls({
         {(isCountdownMode || status === 'running' || status === 'paused' || elapsedSeconds > 0) && (
           <div className="w-full pt-2 flex flex-col gap-2.5 animate-fadeIn">
             {/* Header info above track */}
-            <div className={`flex items-center justify-between text-xs font-mono ${isRose ? 'text-pink-200' : 'text-slate-300'}`}>
+            <div className={`flex flex-wrap items-center justify-between gap-1.5 text-xs font-mono ${isRose ? 'text-pink-200' : 'text-slate-300'}`}>
               <div className="flex items-center gap-2">
                 <div className={`w-6 h-6 rounded-xl flex items-center justify-center border shadow-sm ${
                   isRose ? 'bg-[#ff2d75]/25 border-[#ff2d75]/50 text-[#ff85b3]' : 'bg-sky-500/20 border-sky-500/40 text-sky-400'

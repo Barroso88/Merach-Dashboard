@@ -409,7 +409,8 @@ export default function RouteMap({
               title="Criar novo percurso personalizado com ponto de partida e chegada"
             >
               <Plus className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Criar Rota</span>
+              <span className="hidden sm:inline">Criar Rota</span>
+              <span className="sm:hidden text-[10px]">Rota</span>
             </button>
 
             {/* Quick Upload Button */}
@@ -438,7 +439,7 @@ export default function RouteMap({
                 title="Visão Frontal 3D da Estrada (Cockpit / Como no Carro)"
               >
                 <Car className="w-3.5 h-3.5" />
-                <span>Visão Frontal</span>
+                <span><span className="hidden sm:inline">Visão </span>Frontal</span>
               </button>
 
               <button
@@ -454,7 +455,7 @@ export default function RouteMap({
                 title="Visão Aérea Satélite (Vista Superior do Percurso)"
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Visão Aérea</span>
+                <span><span className="hidden sm:inline">Visão </span>Aérea</span>
               </button>
             </div>
           </div>
