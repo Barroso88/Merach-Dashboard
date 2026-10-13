@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Volume1, Volume2, VolumeX,
-  Music2, X, Plus, Trash2, Smartphone, ExternalLink
+  Music2, X, Plus, Trash2, Smartphone, ExternalLink, Search, Star, Loader2
 } from 'lucide-react';
 
 const SPOTIFY_GREEN = '#1DB954';
@@ -105,12 +105,92 @@ export function SpotifyNavButton({ spotify, onOpen, className = '' }) {
   );
 }
 
+// Catalogue search through our server (/api/spotify/*, Client Credentials on the server side)
+function useSpotifySearch(isOpen) {
+  const [status, setStatus] = useState({ checked: false, configured: false, hasUser: false });
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [userPlaylists, setUserPlaylists] = useState([]);
+  const reqId = useRef(0);
+
+  useEffect(() => {
+    if (!isOpen || status.checked) return;
+    fetch('/api/spotify/status')
+      .then(r => (r.ok ? r.json() : { configured: false }))
+      .then((st) => {
+        setStatus({ checked: true, configured: Boolean(st.configured), hasUser: Boolean(st.hasUser) });
+        if (st.configured && st.hasUser) {
+          fetch('/api/spotify/user-playlists').then(r => r.json()).then(d => setUserPlaylists(d.playlists || [])).catch(() => {});
+        }
+      })
+      .catch(() => setStatus({ checked: true, configured: false, hasUser: false }));
+  }, [isOpen, status.checked]);
+
+  // Debounced search-as-you-type
+  useEffect(() => {
+    const q = query.trim();
+    if (!q || !status.configured) {
+      setResults(null);
+      setLoading(false);
+      return undefined;
+    }
+    const id = ++reqId.current;
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (id !== reqId.current) return;
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        setResults(data);
+        setError(null);
+      } catch (err) {
+        if (id === reqId.current) setError(err.message);
+      } finally {
+        if (id === reqId.current) setLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [query, status.configured]);
+
+  return { status, query, setQuery, results, loading, error, userPlaylists };
+}
+
+function ResultRow({ item, onPlay, onSave }) {
+  return (
+    <div className="group flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-white/[0.06] transition-colors">
+      <button type="button" onClick={() => onPlay(item)} className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer">
+        <Cover src={item.image} size={40} rounded={item.type === 'artist' ? 'rounded-full' : 'rounded-md'} />
+        <span className="min-w-0">
+          <span className="block text-[13px] font-semibold text-white truncate">{item.name}</span>
+          <span className="block text-[11px] text-slate-400 truncate">
+            {item.subtitle}
+            {item.type === 'track' && item.durationMs ? ` · ${fmt(item.durationMs / 1000)}` : ''}
+            {item.type === 'playlist' && item.total != null ? ` · ${item.total} músicas` : ''}
+          </span>
+        </span>
+      </button>
+      {onSave && (item.type === 'playlist' || item.type === 'album') && (
+        <button type="button" onClick={() => onSave(item)} className="p-2 text-slate-500 hover:text-amber-300" title="Guardar como atalho">
+          <Star className="w-4 h-4" />
+        </button>
+      )}
+      <button type="button" onClick={() => onPlay(item)} className="p-2 rounded-full text-slate-950 opacity-90 group-hover:opacity-100" style={{ background: SPOTIFY_GREEN }} title="Tocar">
+        <Play className="w-3.5 h-3.5 fill-current" />
+      </button>
+    </div>
+  );
+}
+
 /** Full player panel. */
 export function SpotifyPanel({ spotify, isOpen, onClose }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [link, setLink] = useState('');
   const [linkError, setLinkError] = useState(null);
+  const search = useSpotifySearch(isOpen);
 
   if (!isOpen || !spotify) return null;
   const { actions } = spotify;
@@ -152,6 +232,60 @@ export function SpotifyPanel({ spotify, isOpen, onClose }) {
             </button>
           </div>
 
+          {/* Search */}
+          <div className="relative mt-4">
+            <div className="flex items-center gap-2 rounded-2xl px-3.5 py-2.5 bg-black/30 ring-1 ring-white/10 focus-within:ring-2 focus-within:ring-[#1DB954]/60">
+              {search.loading ? <Loader2 className="w-4 h-4 text-slate-400 animate-spin" /> : <Search className="w-4 h-4 text-slate-400" />}
+              <input
+                value={search.query}
+                onChange={(e) => search.setQuery(e.target.value)}
+                placeholder="Procurar músicas, playlists, artistas…"
+                disabled={search.status.checked && !search.status.configured}
+                className="flex-1 min-w-0 bg-transparent text-[14px] text-white outline-none placeholder:text-slate-500 disabled:opacity-60"
+                enterKeyHint="search"
+              />
+              {search.query && (
+                <button type="button" onClick={() => search.setQuery('')} className="p-0.5 text-slate-400 hover:text-white" aria-label="Limpar pesquisa">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {search.status.checked && !search.status.configured && (
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                Para pesquisar, adiciona <span className="font-mono text-slate-300">SPOTIFY_CLIENT_ID</span> e <span className="font-mono text-slate-300">SPOTIFY_CLIENT_SECRET</span> às variáveis do contentor no Unraid.
+              </p>
+            )}
+          </div>
+
+          {search.query.trim() && search.status.configured ? (
+            <div className="relative mt-3 space-y-4">
+              {search.error && <p className="text-[12px] text-amber-300">Erro na pesquisa: {search.error}</p>}
+              {search.results && [
+                ['Músicas', search.results.tracks],
+                ['Playlists', search.results.playlists],
+                ['Álbuns', search.results.albums],
+                ['Artistas', search.results.artists]
+              ].map(([label, items]) => items && items.length > 0 && (
+                <div key={label}>
+                  <span className="px-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">{label}</span>
+                  <div className="mt-1">
+                    {items.map((item) => (
+                      <ResultRow
+                        key={item.uri}
+                        item={item}
+                        onPlay={(it) => actions.playUri({ uri: it.uri, type: it.type })}
+                        onSave={(it) => actions.addShortcut(it.name, it.uri)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {search.results && !search.loading && !['tracks', 'playlists', 'albums', 'artists'].some(k => search.results[k]?.length) && (
+                <p className="text-[12px] text-slate-500 px-2">Sem resultados para “{search.query}”.</p>
+              )}
+            </div>
+          ) : (
+          <>
           {/* Now playing */}
           <div className="relative mt-4 flex flex-col items-center text-center">
             <Cover src={spotify.cover} size={210} rounded="rounded-2xl" />
@@ -286,6 +420,20 @@ export function SpotifyPanel({ spotify, isOpen, onClose }) {
               </div>
             )}
           </div>
+
+          {/* Rider's public playlists (optional SPOTIFY_USER) */}
+          {search.userPlaylists.length > 0 && (
+            <div className="relative mt-5">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">As minhas playlists</span>
+              <div className="mt-1">
+                {search.userPlaylists.map((item) => (
+                  <ResultRow key={item.uri} item={item} onPlay={(it) => actions.playUri({ uri: it.uri, type: it.type })} onSave={(it) => actions.addShortcut(it.name, it.uri)} />
+                ))}
+              </div>
+            </div>
+          )}
+          </>
+          )}
 
           {spotify.error && (
             <p className="relative mt-4 text-[11px] leading-relaxed text-amber-300/90">
