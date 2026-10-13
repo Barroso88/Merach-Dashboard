@@ -48,13 +48,13 @@ function LiquidButton({ onClick, from, to, glow, children }) {
 // Each duration has its own colour (cool → hot as the ride gets longer)
 const COUNTDOWN_PRESETS = [
   { id: 'free', label: 'Livre', seconds: 0, tag: 'Sem limite', from: '#94a3b8', to: '#475569' },
-  { id: '5m', label: '5 min', seconds: 300, tag: 'Sprint', from: '#38bdf8', to: '#0369a1' },
-  { id: '10m', label: '10 min', seconds: 600, tag: 'Express', from: '#34d399', to: '#047857' },
-  { id: '15m', label: '15 min', seconds: 900, tag: 'Cardio', from: '#a3e635', to: '#4d7c0f' },
+  { id: '5m', label: '5 min', seconds: 300, tag: 'Sprint', from: '#3b82f6', to: '#1e40af' },
+  { id: '10m', label: '10 min', seconds: 600, tag: 'Express', from: '#14b8a6', to: '#0f766e' },
+  { id: '15m', label: '15 min', seconds: 900, tag: 'Cardio', from: '#22c55e', to: '#15803d' },
   { id: '20m', label: '20 min', seconds: 1200, tag: 'Queima', from: '#facc15', to: '#a16207' },
-  { id: '30m', label: '30 min', seconds: 1800, tag: 'Endurance', from: '#fb923c', to: '#c2410c' },
-  { id: '45m', label: '45 min', seconds: 2700, tag: 'Pro Ride', from: '#f43f5e', to: '#9f1239' },
-  { id: '60m', label: '60 min', seconds: 3600, tag: 'Desafio', from: '#a78bfa', to: '#6d28d9' }
+  { id: '30m', label: '30 min', seconds: 1800, tag: 'Endurance', from: '#f97316', to: '#c2410c' },
+  { id: '45m', label: '45 min', seconds: 2700, tag: 'Pro Ride', from: '#ef4444', to: '#991b1b' },
+  { id: '60m', label: '60 min', seconds: 3600, tag: 'Desafio', from: '#a855f7', to: '#6b21a8' }
 ];
 
 export default function WorkoutControls({
@@ -253,32 +253,32 @@ export default function WorkoutControls({
                         'inset 0 1.5px 0 rgba(255,255,255,0.7)',
                         'inset 0 -2px 3px rgba(255,255,255,0.3)',
                         'inset 0 8px 12px -6px rgba(255,255,255,0.4)',
-                        'inset 0 0 0 1px rgba(255,255,255,0.2)',
-                        `0 10px 22px -8px ${preset.from}`
+                        '0 0 0 2px #ffffff',
+                        `0 0 0 4px ${preset.from}66`,
+                        `0 12px 26px -8px ${preset.from}`
                       ].join(', '),
                       textShadow: '0 1px 2px rgba(0,0,0,0.35)'
                     } : {
-                      // Unselected: translucent tinted glass chip
-                      background: `linear-gradient(180deg, ${preset.from}48 0%, ${preset.to}30 100%)`,
-                      backdropFilter: 'blur(12px) saturate(160%)',
-                      WebkitBackdropFilter: 'blur(12px) saturate(160%)',
+                      // Unselected: clearly coloured glass chip, a little darker than when selected
+                      background: `linear-gradient(180deg, ${preset.from}c7 0%, ${preset.to}b3 100%)`,
                       boxShadow: [
-                        'inset 0 1px 0 rgba(255,255,255,0.32)',
-                        'inset 0 -1px 0 rgba(255,255,255,0.08)',
-                        `inset 0 0 0 1px ${preset.from}55`,
+                        'inset 0 1px 0 rgba(255,255,255,0.4)',
+                        'inset 0 -1px 0 rgba(255,255,255,0.1)',
+                        `inset 0 0 0 1px ${preset.from}`,
                         '0 6px 14px -8px rgba(0,0,0,0.8)'
-                      ].join(', ')
+                      ].join(', '),
+                      textShadow: '0 1px 2px rgba(0,0,0,0.4)'
                     }}
                   >
                     {/* Curved specular highlight */}
                     <span
                       className="pointer-events-none absolute top-[2px] left-[8%] right-[8%] h-[46%] rounded-[14px] bg-gradient-to-b to-transparent"
-                      style={{ backgroundImage: `linear-gradient(180deg, rgba(255,255,255,${isSelected ? 0.45 : 0.16}), transparent)` }}
+                      style={{ backgroundImage: `linear-gradient(180deg, rgba(255,255,255,${isSelected ? 0.45 : 0.28}), transparent)` }}
                     />
                     <span className="relative text-[13px] font-semibold tabular-nums tracking-tight">{preset.label}</span>
                     <span
                       className="relative text-[9px] font-medium tracking-wide mt-0.5"
-                      style={{ color: isSelected ? 'rgba(255,255,255,0.9)' : preset.from, filter: isSelected ? undefined : 'brightness(1.3)' }}
+                      style={{ color: 'rgba(255,255,255,0.88)' }}
                     >
                       {preset.tag}
                     </span>
