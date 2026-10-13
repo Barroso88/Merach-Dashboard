@@ -343,6 +343,11 @@ export function SpotifyPanel({ spotify, isOpen, onClose }) {
           {/* Device */}
           <div className="relative mt-5">
             <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Tocar em</span>
+            {!spotify.canControl && spotify.sources.length > 0 && (
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                Nada a tocar: carrega em ▶ (ou numa lista) e a música começa no aparelho escolhido.
+              </p>
+            )}
             {spotify.sources.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {spotify.sources.map((src) => (
