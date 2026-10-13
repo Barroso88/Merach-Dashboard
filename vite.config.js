@@ -42,9 +42,17 @@ function haProxyPlugin() {
             forwardHeaders['CF-Access-Client-Secret'] = req.headers['cf-access-client-secret'];
           }
 
+          let forwardBody;
+          if (req.method && !['GET', 'HEAD'].includes(req.method)) {
+            const chunks = [];
+            for await (const c of req) chunks.push(c);
+            forwardBody = Buffer.concat(chunks);
+          }
+
           const response = await fetch(target, {
             method: req.method || 'GET',
             headers: forwardHeaders,
+            body: forwardBody && forwardBody.length ? forwardBody : undefined,
             signal: AbortSignal.timeout(8000)
           });
 

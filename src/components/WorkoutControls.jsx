@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import LaunchCountdownOverlay from './LaunchCountdownOverlay';
 import GoalTrack from './GoalTrack';
+import { SpotifyStrip } from './SpotifyPlayer';
 import { accentHairlineStyle } from '../constants/surfaces';
 import GlassPanel from './GlassPanel';
 
@@ -70,7 +71,9 @@ export default function WorkoutControls({
   themeConfig,
   cadence = 0,
   onBeforeStart,
-  riderName
+  riderName,
+  spotify,
+  onOpenSpotify
 }) {
   const [showLaunchOverlay, setShowLaunchOverlay] = useState(false);
   const [displayMode, setDisplayMode] = useState('countdown'); // 'countdown' | 'elapsed'
@@ -441,6 +444,9 @@ export default function WorkoutControls({
             </div>
           </div>
         )}
+
+        {/* Now playing (only while music is playing or paused) */}
+        <SpotifyStrip spotify={spotify} onOpen={onOpenSpotify} />
 
       </GlassPanel>
     </>

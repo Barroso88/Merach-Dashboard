@@ -22,6 +22,8 @@ export default function LiveDashboard({
   onStart,
   onBeforeStart,
   riderName,
+  spotify,
+  onOpenSpotify,
   onPause,
   onResume,
   onStop,
@@ -52,6 +54,17 @@ export default function LiveDashboard({
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
   }, []);
+
+  // The now-playing strip adds height to the timer card; on short iPad screens shrink the dials a touch
+  const musicStripVisible = Boolean(spotify?.available && spotify.hasMedia && ['playing', 'paused'].includes(spotify.status));
+  const isTabletLandscape = typeof window !== 'undefined' && window.innerWidth >= 1024 && window.innerWidth < 1280 && window.innerWidth > window.innerHeight;
+  const isShortTablet = isTabletLandscape && window.innerHeight < 820;
+  let dialSize = gaugeSize;
+  if (musicStripVisible && isTabletLandscape) {
+    // Idle also shows the route banner, so it needs a bit more room than mid-workout
+    if (workoutStatus === 'idle') dialSize = gaugeSize - 32;
+    else if (isShortTablet) dialSize = gaugeSize - 14;
+  }
 
   // Use themeConfig or fallback to cyan
   const speedAccent = themeConfig?.speedAccent || '#38bdf8';
@@ -117,6 +130,8 @@ export default function LiveDashboard({
             onStart={onStart}
             onBeforeStart={onBeforeStart}
             riderName={riderName}
+            spotify={spotify}
+            onOpenSpotify={onOpenSpotify}
             onPause={onPause}
             onResume={onResume}
             onStop={onStop}
@@ -232,7 +247,7 @@ export default function LiveDashboard({
               unit="km/h"
               title="Velocidade"
               zones={speedZones}
-              size={gaugeSize}
+              size={dialSize}
               accentColor={speedAccent}
               peak={sessionStats.maxSpeed}
               themeConfig={themeConfig}
@@ -263,7 +278,7 @@ export default function LiveDashboard({
               unit="rpm"
               title="Cadência"
               zones={cadenceZones}
-              size={gaugeSize}
+              size={dialSize}
               accentColor={cadenceAccent}
               peak={sessionStats.maxCadence}
               themeConfig={themeConfig}

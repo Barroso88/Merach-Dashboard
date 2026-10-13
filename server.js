@@ -279,6 +279,45 @@ const MIME_TYPES = {
   '.ttf': 'font/ttf'
 };
 
+// ==========================================
+// SPOTIFY WEB API (catalogue search only)
+// ==========================================
+const SPOTIFY_ACCOUNTS = process.env.SPOTIFY_ACCOUNTS_BASE || 'https://accounts.spotify.com';
+const SPOTIFY_API = process.env.SPOTIFY_API_BASE || 'https://api.spotify.com';
+let spotifyToken = null; // { value, expiresAt }
+
+async function getSpotifyToken() {
+  if (spotifyToken && Date.now() < spotifyToken.expiresAt - 60000) return spotifyToken.value;
+  const basic = Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64');
+  const res = await fetch(`${SPOTIFY_ACCOUNTS}/api/token`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=client_credentials',
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) throw new Error(`Spotify auth failed (${res.status}). Confirma SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET.`);
+  const data = await res.json();
+  spotifyToken = { value: data.access_token, expiresAt: Date.now() + (data.expires_in || 3600) * 1000 };
+  return spotifyToken.value;
+}
+
+async function spotifyApi(pathAndQuery) {
+  const token = await getSpotifyToken();
+  const res = await fetch(`${SPOTIFY_API}${pathAndQuery}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(8000)
+  });
+  if (res.status === 401) spotifyToken = null;
+  if (!res.ok) throw new Error(`Spotify API ${res.status}`);
+  return res.json();
+}
+
+const pickImage = (images) => (Array.isArray(images) && images.length ? (images[images.length > 1 ? 1 : 0] || images[0]).url : null);
+const simplifyTrack = (t) => ({ uri: t.uri, type: 'track', name: t.name, subtitle: (t.artists || []).map(a => a.name).join(', '), image: pickImage(t.album?.images), durationMs: t.duration_ms });
+const simplifyPlaylist = (p) => ({ uri: p.uri, type: 'playlist', name: p.name, subtitle: p.owner?.display_name || '', image: pickImage(p.images), total: p.tracks?.total ?? null });
+const simplifyAlbum = (a) => ({ uri: a.uri, type: 'album', name: a.name, subtitle: (a.artists || []).map(x => x.name).join(', '), image: pickImage(a.images) });
+const simplifyArtist = (a) => ({ uri: a.uri, type: 'artist', name: a.name, subtitle: 'Artista', image: pickImage(a.images) });
+
 // Origins the /ha-proxy is allowed to reach: only the configured Home Assistant instance(s)
 function getAllowedHaOrigins() {
   const origins = new Set();
@@ -359,9 +398,26 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      // Forward the raw body for service calls (e.g. POST /api/services/media_player/...)
+      let forwardBody;
+      if (req.method && !['GET', 'HEAD'].includes(req.method)) {
+        forwardBody = await new Promise((resolve, reject) => {
+          const chunks = [];
+          let size = 0;
+          req.on('data', (c) => {
+            size += c.length;
+            if (size > 1024 * 1024) { reject(new Error('Payload too large')); req.destroy(); return; }
+            chunks.push(c);
+          });
+          req.on('end', () => resolve(Buffer.concat(chunks)));
+          req.on('error', reject);
+        });
+      }
+
       const targetRes = await fetch(target, {
         method: req.method || 'GET',
         headers: forwardHeaders,
+        body: forwardBody && forwardBody.length ? forwardBody : undefined,
         signal: AbortSignal.timeout(10000)
       });
 
@@ -746,6 +802,47 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ error: err.message }));
       }
     }
+  }
+
+  // 8. Spotify catalogue search (Client Credentials flow; the secret never leaves the server)
+  if (parsedUrl.pathname.startsWith('/api/spotify/')) {
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    const configured = Boolean(clientId && clientSecret);
+    const json = (code, body) => {
+      res.writeHead(code, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(body));
+    };
+
+    if (parsedUrl.pathname === '/api/spotify/status' && req.method === 'GET') {
+      return json(200, { configured, hasUser: Boolean(process.env.SPOTIFY_USER) });
+    }
+    if (!configured) return json(501, { error: 'not_configured' });
+
+    try {
+      if (parsedUrl.pathname === '/api/spotify/search' && req.method === 'GET') {
+        const q = (parsedUrl.searchParams.get('q') || '').trim().slice(0, 100);
+        if (!q) return json(400, { error: 'missing q' });
+        const params = new URLSearchParams({ q, type: 'track,playlist,album,artist', limit: '8', market: process.env.SPOTIFY_MARKET || 'PT' });
+        const data = await spotifyApi(`/v1/search?${params}`);
+        return json(200, {
+          tracks: (data.tracks?.items || []).filter(Boolean).map(simplifyTrack),
+          playlists: (data.playlists?.items || []).filter(Boolean).map(simplifyPlaylist),
+          albums: (data.albums?.items || []).filter(Boolean).map(simplifyAlbum),
+          artists: (data.artists?.items || []).filter(Boolean).map(simplifyArtist)
+        });
+      }
+
+      if (parsedUrl.pathname === '/api/spotify/user-playlists' && req.method === 'GET') {
+        const user = process.env.SPOTIFY_USER;
+        if (!user) return json(200, { playlists: [] });
+        const data = await spotifyApi(`/v1/users/${encodeURIComponent(user)}/playlists?limit=30`);
+        return json(200, { playlists: (data.items || []).filter(Boolean).map(simplifyPlaylist) });
+      }
+    } catch (err) {
+      return json(502, { error: err.message });
+    }
+    return json(404, { error: 'not found' });
   }
 
   // 6. Static Files (SPA with fallback to index.html)
