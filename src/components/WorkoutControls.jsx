@@ -37,7 +37,8 @@ export default function WorkoutControls({
   onReset,
   themeConfig,
   cadence = 0,
-  onBeforeStart
+  onBeforeStart,
+  riderName
 }) {
   const [showLaunchOverlay, setShowLaunchOverlay] = useState(false);
   const [displayMode, setDisplayMode] = useState('countdown'); // 'countdown' | 'elapsed'
@@ -146,7 +147,7 @@ export default function WorkoutControls({
         isOpen={showLaunchOverlay}
         onComplete={handleLaunchComplete}
         onSkip={handleLaunchSkip}
-        themeConfig={themeConfig}
+        riderName={riderName}
       />
 
       <div
@@ -333,7 +334,7 @@ export default function WorkoutControls({
             {status === 'running' && (
               <button
                 onClick={onPause}
-                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 tab:py-3 rounded-2xl font-semibold text-[13px] uppercase tracking-[0.18em] text-white active:scale-[0.97] transition-all cursor-pointer bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_0_1px_rgba(239,68,68,0.9),0_12px_28px_-10px_rgba(239,68,68,0.85)]"
+                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 tab:py-3 rounded-2xl font-semibold text-[13px] uppercase tracking-[0.18em] text-white active:scale-[0.97] transition-all cursor-pointer bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 -translate-y-[4px] active:translate-y-0 active:scale-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_0_1px_rgba(239,68,68,0.9),0_4px_0_#991b1b,0_5px_0_rgba(0,0,0,0.35),0_16px_28px_-10px_rgba(239,68,68,0.8)] active:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_0_1px_rgba(239,68,68,0.9),0_0_0_#991b1b,0_6px_14px_-6px_rgba(239,68,68,0.7)]"
               >
                 <Pause className="w-4 h-4 fill-white text-white" />
                 Pausar
@@ -355,7 +356,7 @@ export default function WorkoutControls({
             {(status === 'running' || status === 'paused') && (
               <button
                 onClick={onStop}
-                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 tab:py-3 rounded-2xl font-semibold text-[13px] uppercase tracking-[0.18em] text-white active:scale-[0.97] transition-all cursor-pointer bg-gradient-to-b from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_0_0_1px_rgba(34,197,94,0.9),0_12px_28px_-10px_rgba(34,197,94,0.85)]"
+                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 tab:py-3 rounded-2xl font-semibold text-[13px] uppercase tracking-[0.18em] text-white active:scale-[0.97] transition-all cursor-pointer bg-gradient-to-b from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 -translate-y-[4px] active:translate-y-0 active:scale-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_0_1px_rgba(34,197,94,0.9),0_4px_0_#15803d,0_5px_0_rgba(0,0,0,0.35),0_16px_28px_-10px_rgba(34,197,94,0.8)] active:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_0_1px_rgba(34,197,94,0.9),0_0_0_#15803d,0_6px_14px_-6px_rgba(34,197,94,0.7)]"
               >
                 <Square className="w-3.5 h-3.5 fill-white text-white" />
                 Finalizar

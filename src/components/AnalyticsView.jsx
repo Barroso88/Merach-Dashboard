@@ -420,10 +420,18 @@ export default function AnalyticsView({
         ].map(({ key, label, icon: Icon, from, to, value, unit, sub }) => (
           <div
             key={key}
-            className="group relative rounded-[20px] p-4 overflow-hidden flex flex-col justify-between text-white transition-all duration-300 hover:-translate-y-0.5"
+            className="group relative rounded-[20px] p-4 overflow-hidden flex flex-col justify-between text-white transition-all duration-200 -translate-y-[5px] hover:-translate-y-[7px] active:-translate-y-[1px] [--slab:5px] hover:[--slab:7px] active:[--slab:1px]"
             style={{
-              background: `linear-gradient(145deg, ${from} 0%, ${to} 100%)`,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), inset 0 0 0 1px rgba(255,255,255,0.08), 0 18px 36px -18px ${from}, 0 24px 48px -28px rgba(0,0,0,0.9)`
+              background: `linear-gradient(160deg, ${from} 0%, ${from} 20%, ${to} 100%)`,
+              boxShadow: [
+                'inset 0 1px 0 rgba(255,255,255,0.45)',
+                'inset 0 -2px 0 rgba(0,0,0,0.18)',
+                'inset 0 0 0 1px rgba(255,255,255,0.10)',
+                `0 var(--slab) 0 ${to}`,
+                `0 calc(var(--slab) + 1px) 0 rgba(0,0,0,0.35)`,
+                `0 calc(var(--slab) + 14px) 28px -10px ${from}aa`,
+                '0 30px 50px -24px rgba(0,0,0,0.9)'
+              ].join(', ')
             }}
           >
             {/* Gloss + texture */}

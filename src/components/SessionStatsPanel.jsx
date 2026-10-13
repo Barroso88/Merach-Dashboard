@@ -17,7 +17,13 @@ function IconTile({ icon: Icon, color }) {
 
 function MiniStat({ icon: Icon, label, value, unit, color }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl px-3 py-2 bg-white/[0.03] ring-1 ring-white/[0.05]">
+    <div
+      className="flex items-center gap-2.5 rounded-xl px-3 py-2"
+      style={{
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04), 0 4px 10px -4px rgba(0,0,0,0.7)'
+      }}
+    >
       <Icon className="w-3.5 h-3.5 shrink-0" style={{ color }} />
       <div className="min-w-0 leading-tight">
         <span className="block text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
@@ -54,16 +60,16 @@ export default function SessionStatsPanel({
       className="w-full rounded-[24px] p-px"
       style={{
         background: `linear-gradient(160deg, ${distanceColor}66 0%, rgba(255,255,255,0.07) 32%, rgba(255,255,255,0.04) 68%, ${caloriesColor}66 100%)`,
-        boxShadow: '0 24px 48px -24px rgba(0,0,0,0.95)'
+        boxShadow: '0 2px 3px rgba(0,0,0,0.5), 0 16px 30px -12px rgba(0,0,0,0.8), 0 36px 60px -30px rgba(0,0,0,0.95)'
       }}
     >
       <div
         className="relative rounded-[23px] px-5 py-4 overflow-hidden"
         style={{
           background: isRose
-            ? 'linear-gradient(180deg, #21082a 0%, #13041a 100%)'
-            : 'linear-gradient(180deg, #101826 0%, #0a0f19 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)'
+            ? 'linear-gradient(180deg, #33103e 0%, #1d0726 45%, #11031a 100%)'
+            : 'linear-gradient(180deg, #1a2436 0%, #111a28 45%, #090e17 100%)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.5)'
         }}
       >
         {/* Soft corner light */}

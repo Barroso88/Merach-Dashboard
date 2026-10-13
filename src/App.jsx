@@ -737,6 +737,7 @@ export default function App() {
             settings={settings}
             onStart={handleStartWorkout}
             onBeforeStart={requestStart}
+            riderName={activeProfile?.name}
             onPause={handlePauseWorkout}
             onResume={handleResumeWorkout}
             onStop={handleStopWorkout}
