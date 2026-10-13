@@ -72,7 +72,7 @@ export default function SessionStatsPanel({
 
         {/* Header */}
         <div className="relative flex items-center justify-between mb-4">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500">Sessão</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-300/80">Sessão</span>
           <span className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${live.text}`}>
             <span className="relative flex w-1.5 h-1.5">
               {live.ping && <span className={`absolute inset-0 rounded-full ${live.dot} animate-ping opacity-75`} />}
