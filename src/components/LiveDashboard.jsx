@@ -20,6 +20,7 @@ export default function LiveDashboard({
   settings,
   onStart,
   onBeforeStart,
+  riderName,
   onPause,
   onResume,
   onStop,
@@ -114,6 +115,7 @@ export default function LiveDashboard({
             onSelectTargetSeconds={onSelectTargetSeconds}
             onStart={onStart}
             onBeforeStart={onBeforeStart}
+            riderName={riderName}
             onPause={onPause}
             onResume={onResume}
             onStop={onStop}

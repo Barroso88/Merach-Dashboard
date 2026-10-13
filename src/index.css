@@ -107,3 +107,25 @@
   from { transform: scaleX(1); }
   to { transform: scaleX(0); }
 }
+
+/* Launch countdown */
+@keyframes countdown-pop {
+  0% { opacity: 0; transform: scale(1.9); filter: blur(8px); }
+  60% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes countdown-ring {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: var(--ring-c); }
+}
+
+@keyframes countdown-line {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes countdown-flash {
+  from { opacity: 0.55; }
+  to { opacity: 0; }
+}
