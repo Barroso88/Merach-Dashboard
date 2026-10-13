@@ -12,7 +12,7 @@ import {
 import LaunchCountdownOverlay from './LaunchCountdownOverlay';
 import GoalTrack from './GoalTrack';
 import { accentHairlineStyle } from '../constants/surfaces';
-import ChamferPanel from './ChamferPanel';
+import GlassPanel from './GlassPanel';
 
 // Each duration has its own colour (cool → hot as the ride gets longer)
 const COUNTDOWN_PRESETS = [
@@ -151,11 +151,11 @@ export default function WorkoutControls({
         riderName={riderName}
       />
 
-      <ChamferPanel
+      <GlassPanel
         isRose={isRose}
         accent={accentColor}
         accent2={isRose ? '#d946ef' : '#34d399'}
-        cut={24}
+        radius={28}
         innerClassName="px-5 py-4 md:px-7 md:py-5 tab:py-3.5 flex flex-col gap-3.5 md:gap-4 tab:gap-2.5"
       >
         {/* Top accent hairline */}
@@ -402,7 +402,7 @@ export default function WorkoutControls({
           </div>
         )}
 
-      </ChamferPanel>
+      </GlassPanel>
     </>
   );
 }

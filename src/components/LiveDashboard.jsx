@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import SportNeedleGauge from './SportNeedleGauge';
 import SessionStatsPanel from './SessionStatsPanel';
 import { accentHairlineStyle } from '../constants/surfaces';
-import ChamferPanel from './ChamferPanel';
+import GlassPanel from './GlassPanel';
 import WorkoutControls from './WorkoutControls';
 import RouteMap from './RouteMap';
 import RouteErrorBoundary from './RouteErrorBoundary';
@@ -163,11 +163,11 @@ export default function LiveDashboard({
       </div>
 
       {/* Active Route Quick-Access Banner (hidden mid-workout on tablet landscape to keep everything on one screen) */}
-      <ChamferPanel
+      <GlassPanel
         isRose={isRose}
         accent={speedAccent}
         accent2={cadenceAccent}
-        cut={14}
+        radius={20}
         elevation="low"
         className={`w-full max-w-3xl ${workoutStatus !== 'idle' ? 'tab:hidden' : ''}`}
         innerClassName="px-5 py-2.5 flex flex-wrap items-center justify-between gap-3"
@@ -202,14 +202,14 @@ export default function LiveDashboard({
           <span>Ver / Alterar Percurso</span>
           <ChevronRight className="w-3 h-3" />
         </button>
-      </ChamferPanel>
+      </GlassPanel>
 
       {/* INSTRUMENT CLUSTER: SPEED | DISTANCE & CALORIES | CADENCE */}
-      <ChamferPanel
+      <GlassPanel
         isRose={isRose}
         accent={speedAccent}
         accent2={cadenceAccent}
-        cut={30}
+        radius={32}
         className="w-full"
         innerClassName="px-5 py-5 md:px-7 md:py-6 lg:px-9 tab:px-7 tab:py-4 flex flex-col items-center"
       >
@@ -271,7 +271,7 @@ export default function LiveDashboard({
           </div>
 
         </div>
-      </ChamferPanel>
+      </GlassPanel>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import ChamferPanel, { chamferPath } from './ChamferPanel';
+import GlassPanel from './GlassPanel';
 import { Route, Flame, Gauge, RotateCw } from 'lucide-react';
 
 function IconTile({ icon: Icon, color }) {
@@ -19,9 +19,8 @@ function IconTile({ icon: Icon, color }) {
 function MiniStat({ icon: Icon, label, value, unit, color }) {
   return (
     <div
-      className="flex items-center gap-2.5 px-3 py-2"
+      className="flex items-center gap-2.5 rounded-xl px-3 py-2"
       style={{
-        clipPath: chamferPath(7),
         background: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04), 0 4px 10px -4px rgba(0,0,0,0.7)'
       }}
@@ -58,14 +57,14 @@ export default function SessionStatsPanel({
   const labelClass = `text-[11px] font-semibold uppercase tracking-[0.24em] ${isRose ? 'text-pink-200/65' : 'text-slate-400'}`;
 
   return (
-    <ChamferPanel
+    <GlassPanel
       isRose={isRose}
       accent={distanceColor}
       accent2={caloriesColor}
-      cut={16}
+      radius={22}
       elevation="low"
       className="w-full"
-      innerClassName="px-5 py-4 overflow-hidden"
+      innerClassName="px-5 py-4 overflow-hidden rounded-[22px]"
     >
         {/* Soft corner light */}
         <div className="absolute -top-16 -left-10 w-44 h-44 rounded-full blur-3xl opacity-[0.12] pointer-events-none" style={{ background: distanceColor }} />
@@ -118,6 +117,6 @@ export default function SessionStatsPanel({
           <MiniStat icon={Gauge} label="Vel. máxima" value={Number(sessionStats?.maxSpeed || 0).toFixed(1)} unit="km/h" color={speedAccent} />
           <MiniStat icon={RotateCw} label="Cad. máxima" value={Number(sessionStats?.maxCadence || 0).toFixed(1)} unit="rpm" color={cadenceAccent} />
         </div>
-    </ChamferPanel>
+    </GlassPanel>
   );
 }
