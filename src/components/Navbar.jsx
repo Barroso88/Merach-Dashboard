@@ -1,5 +1,6 @@
 import React from 'react';
 import { Avatar } from './ProfilesModal';
+import { SpotifyNavButton } from './SpotifyPlayer';
 import {
   Bike,
   Activity,
@@ -70,7 +71,9 @@ export default function Navbar({
   onToggleTheme,
   onToggleCollapse,
   activeProfile,
-  onOpenProfiles
+  onOpenProfiles,
+  spotify,
+  onOpenSpotify
 }) {
   const isRose = currentTheme === 'rose';
   const accent = isRose ? '#ff2d75' : '#38bdf8';
@@ -205,6 +208,9 @@ export default function Navbar({
               {mode === 'simulation' ? 'Simulador' : 'Home Assistant'}
             </span>
           </button>
+
+          {/* Music */}
+          <SpotifyNavButton spotify={spotify} onOpen={onOpenSpotify} className={iconButtonClass} />
 
           {/* Settings */}
           <button type="button" onClick={onOpenSettings} className={`${iconButtonClass} w-9`} title="Configurações de Sensores e Perfil">

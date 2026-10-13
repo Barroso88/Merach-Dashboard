@@ -40,7 +40,7 @@ export class HomeAssistantService {
   }
 
   // Smart request helper: tries direct fetch first, and automatically falls back to /ha-proxy on CORS errors
-  async request(path, method = 'GET') {
+  async request(path, method = 'GET', body) {
     const directUrl = `${this.url}${path}`;
     const headers = this.getHeaders();
 
@@ -48,6 +48,7 @@ export class HomeAssistantService {
       const res = await fetch(directUrl, {
         method,
         headers,
+        body,
         signal: AbortSignal.timeout(4000)
       });
       const ct = res.headers.get('content-type') || '';
@@ -63,6 +64,7 @@ export class HomeAssistantService {
           const proxyRes = await fetch(proxyUrl, {
             method,
             headers,
+            body,
             signal: AbortSignal.timeout(8000)
           });
           const proxyCt = proxyRes.headers.get('content-type') || '';
@@ -354,5 +356,37 @@ export class HomeAssistantService {
       console.warn('Failed to fetch telemetry from Home Assistant:', err);
       throw err;
     }
+  }
+
+  // ===== Spotify (HA Spotify integration exposes it as media_player.spotify_*) =====
+
+  async findSpotifyEntity() {
+    if (!this.token) return null;
+    const res = await this.request('/api/states');
+    if (!res.ok) return null;
+    const states = await res.json();
+    const match = states.find(s => s.entity_id.startsWith('media_player.spotify'));
+    return match ? match.entity_id : null;
+  }
+
+  async getEntityState(entityId) {
+    const res = await this.request(`/api/states/${entityId}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async callService(domain, service, data = {}) {
+    const res = await this.request(`/api/services/${domain}/${service}`, 'POST', JSON.stringify(data));
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || `HTTP ${res.status}`);
+    }
+    return true;
+  }
+
+  // Absolute URL for an entity_picture (HA returns either a relative proxy path or a full URL)
+  resolveMediaUrl(path) {
+    if (!path) return null;
+    return /^https?:/i.test(path) ? path : `${this.url}${path}`;
   }
 }

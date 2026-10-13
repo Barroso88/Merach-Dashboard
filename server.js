@@ -359,9 +359,26 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      // Forward the raw body for service calls (e.g. POST /api/services/media_player/...)
+      let forwardBody;
+      if (req.method && !['GET', 'HEAD'].includes(req.method)) {
+        forwardBody = await new Promise((resolve, reject) => {
+          const chunks = [];
+          let size = 0;
+          req.on('data', (c) => {
+            size += c.length;
+            if (size > 1024 * 1024) { reject(new Error('Payload too large')); req.destroy(); return; }
+            chunks.push(c);
+          });
+          req.on('end', () => resolve(Buffer.concat(chunks)));
+          req.on('error', reject);
+        });
+      }
+
       const targetRes = await fetch(target, {
         method: req.method || 'GET',
         headers: forwardHeaders,
+        body: forwardBody && forwardBody.length ? forwardBody : undefined,
         signal: AbortSignal.timeout(10000)
       });
 

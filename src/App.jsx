@@ -9,6 +9,8 @@ import ConnectionSettingsModal from './components/ConnectionSettingsModal';
 import ModalErrorBoundary from './components/ModalErrorBoundary';
 import MotivationalPopup from './components/MotivationalPopup';
 import ProfilesModal, { Avatar } from './components/ProfilesModal';
+import { SpotifyPanel } from './components/SpotifyPlayer';
+import useSpotify from './hooks/useSpotify';
 import {
   getStoredProfiles,
   saveProfiles,
@@ -99,6 +101,9 @@ export default function App() {
     proceed?.();
   };
 
+  // Spotify via the Home Assistant integration (manual control only)
+  const [isSpotifyOpen, setIsSpotifyOpen] = useState(false);
+
   // Analytics: which rider's history to show ('active' follows the active profile)
   const [analyticsProfile, setAnalyticsProfile] = useState('active');
 
@@ -133,6 +138,8 @@ export default function App() {
   if (!haServiceRef.current) {
     haServiceRef.current = new HomeAssistantService(settings);
   }
+
+  const spotify = useSpotify(haServiceRef.current, settings.mode === 'homeassistant' && Boolean(settings.haToken));
 
   // Active Simulation Preset ('steady' | 'intervals' | 'climb')
   const [simulationPreset, setSimulationPreset] = useState('steady');
@@ -717,6 +724,8 @@ export default function App() {
           onToggleCollapse={() => setIsNavbarCollapsed(prev => !prev)}
           activeProfile={activeProfile}
           onOpenProfiles={() => setProfilesModal('manage')}
+          spotify={spotify}
+          onOpenSpotify={() => setIsSpotifyOpen(true)}
         />
       </div>
 
@@ -738,6 +747,8 @@ export default function App() {
             onStart={handleStartWorkout}
             onBeforeStart={requestStart}
             riderName={activeProfile?.name}
+            spotify={spotify}
+            onOpenSpotify={() => setIsSpotifyOpen(true)}
             onPause={handlePauseWorkout}
             onResume={handleResumeWorkout}
             onStop={handleStopWorkout}
@@ -806,6 +817,9 @@ export default function App() {
         themeConfig={activeTheme}
         riderName={activeProfile?.name}
       />
+
+      {/* Full Spotify player */}
+      <SpotifyPanel spotify={spotify} isOpen={isSpotifyOpen} onClose={() => setIsSpotifyOpen(false)} />
 
       {/* Rider profiles: "who is riding?" before each start, or manage from the navbar */}
       <ProfilesModal
