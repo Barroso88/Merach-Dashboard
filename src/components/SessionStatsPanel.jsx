@@ -1,4 +1,5 @@
 import React from 'react';
+import ChamferPanel, { chamferPath } from './ChamferPanel';
 import { Route, Flame, Gauge, RotateCw } from 'lucide-react';
 
 function IconTile({ icon: Icon, color }) {
@@ -18,8 +19,9 @@ function IconTile({ icon: Icon, color }) {
 function MiniStat({ icon: Icon, label, value, unit, color }) {
   return (
     <div
-      className="flex items-center gap-2.5 rounded-xl px-3 py-2"
+      className="flex items-center gap-2.5 px-3 py-2"
       style={{
+        clipPath: chamferPath(7),
         background: 'linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04), 0 4px 10px -4px rgba(0,0,0,0.7)'
       }}
@@ -56,22 +58,15 @@ export default function SessionStatsPanel({
   const labelClass = `text-[11px] font-semibold uppercase tracking-[0.24em] ${isRose ? 'text-pink-200/65' : 'text-slate-400'}`;
 
   return (
-    <div
-      className="w-full rounded-[24px] p-px"
-      style={{
-        background: `linear-gradient(160deg, ${distanceColor}66 0%, rgba(255,255,255,0.07) 32%, rgba(255,255,255,0.04) 68%, ${caloriesColor}66 100%)`,
-        boxShadow: '0 2px 3px rgba(0,0,0,0.5), 0 16px 30px -12px rgba(0,0,0,0.8), 0 36px 60px -30px rgba(0,0,0,0.95)'
-      }}
+    <ChamferPanel
+      isRose={isRose}
+      accent={distanceColor}
+      accent2={caloriesColor}
+      cut={16}
+      elevation="low"
+      className="w-full"
+      innerClassName="px-5 py-4 overflow-hidden"
     >
-      <div
-        className="relative rounded-[23px] px-5 py-4 overflow-hidden"
-        style={{
-          background: isRose
-            ? 'linear-gradient(180deg, #33103e 0%, #1d0726 45%, #11031a 100%)'
-            : 'linear-gradient(180deg, #1a2436 0%, #111a28 45%, #090e17 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.5)'
-        }}
-      >
         {/* Soft corner light */}
         <div className="absolute -top-16 -left-10 w-44 h-44 rounded-full blur-3xl opacity-[0.12] pointer-events-none" style={{ background: distanceColor }} />
         <div className="absolute -bottom-16 -right-10 w-44 h-44 rounded-full blur-3xl opacity-[0.10] pointer-events-none" style={{ background: caloriesColor }} />
@@ -123,7 +118,6 @@ export default function SessionStatsPanel({
           <MiniStat icon={Gauge} label="Vel. máxima" value={Number(sessionStats?.maxSpeed || 0).toFixed(1)} unit="km/h" color={speedAccent} />
           <MiniStat icon={RotateCw} label="Cad. máxima" value={Number(sessionStats?.maxCadence || 0).toFixed(1)} unit="rpm" color={cadenceAccent} />
         </div>
-      </div>
-    </div>
+    </ChamferPanel>
   );
 }

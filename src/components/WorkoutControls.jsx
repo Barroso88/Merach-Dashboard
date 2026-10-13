@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import LaunchCountdownOverlay from './LaunchCountdownOverlay';
 import GoalTrack from './GoalTrack';
-import { premiumSurfaceStyle, accentHairlineStyle } from '../constants/surfaces';
+import { accentHairlineStyle } from '../constants/surfaces';
+import ChamferPanel from './ChamferPanel';
 
 // Each duration has its own colour (cool → hot as the ride gets longer)
 const COUNTDOWN_PRESETS = [
@@ -150,16 +151,19 @@ export default function WorkoutControls({
         riderName={riderName}
       />
 
-      <div
-        className="rounded-[28px] px-4 py-4 md:px-6 md:py-5 tab:py-3.5 flex flex-col gap-3.5 md:gap-4 tab:gap-2.5 relative overflow-hidden transition-colors duration-500"
-        style={premiumSurfaceStyle(isRose, accentColor)}
+      <ChamferPanel
+        isRose={isRose}
+        accent={accentColor}
+        accent2={isRose ? '#d946ef' : '#34d399'}
+        cut={24}
+        innerClassName="px-5 py-4 md:px-7 md:py-5 tab:py-3.5 flex flex-col gap-3.5 md:gap-4 tab:gap-2.5"
       >
         {/* Top accent hairline */}
         <div className="absolute top-0 inset-x-10 h-px pointer-events-none" style={accentHairlineStyle(accentColor)} />
 
         {/* Rider image picker (corner) */}
         {status !== 'idle' && (
-          <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
+          <div className="absolute top-3 right-8 z-10 flex items-center gap-1">
             <input
               type="file"
               ref={fileInputRef}
@@ -398,7 +402,7 @@ export default function WorkoutControls({
           </div>
         )}
 
-      </div>
+      </ChamferPanel>
     </>
   );
 }
