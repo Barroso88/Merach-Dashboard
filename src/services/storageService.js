@@ -55,8 +55,8 @@ export function deleteWorkoutFromStorage(workoutId) {
     const current = getStoredWorkouts();
     const updated = current.filter(w => w.id !== workoutId);
     localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(updated));
-    // Asynchronously sync with central server
-    syncWorkoutsToServer(updated);
+    // The server POST endpoint merges, so deletions must be sent explicitly
+    deleteWorkoutOnServer(workoutId);
     return updated;
   } catch (err) {
     console.error('Error deleting workout', err);
@@ -65,8 +65,11 @@ export function deleteWorkoutFromStorage(workoutId) {
 }
 
 export function resetWorkoutsToDefault() {
+  const current = getStoredWorkouts();
   localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(INITIAL_WORKOUTS));
-  syncWorkoutsToServer(INITIAL_WORKOUTS);
+  for (const w of current) {
+    if (w?.id) deleteWorkoutOnServer(w.id);
+  }
   return INITIAL_WORKOUTS;
 }
 
@@ -77,7 +80,8 @@ export const DEFAULT_SETTINGS = {
   haToken: '',
   cfClientId: '',
   cfClientSecret: '',
-  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAvscR3r1g4VGLbRpdKoC7DtB9Ezla_oac',
+  // Provided via VITE_GOOGLE_MAPS_API_KEY at build time, the GOOGLE_MAPS_API_KEY server env var, or the settings modal
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
   haEntities: {
     cadence: 'sensor.merach_bike_cadence',
     speed: 'sensor.merach_bike_speed',
@@ -166,6 +170,18 @@ async function syncWorkoutsToServer(workouts) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(workouts)
+    });
+  } catch {
+    // Graceful fallback
+  }
+}
+
+async function deleteWorkoutOnServer(workoutId) {
+  try {
+    await fetch(`/api/workouts?id=${encodeURIComponent(workoutId)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: workoutId })
     });
   } catch {
     // Graceful fallback

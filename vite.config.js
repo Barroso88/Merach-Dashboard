@@ -16,6 +16,17 @@ function haProxyPlugin() {
             res.end(JSON.stringify({ error: 'Missing target URL parameter' }));
             return;
           }
+          let targetUrl;
+          try {
+            targetUrl = new URL(target);
+          } catch {
+            targetUrl = null;
+          }
+          if (!targetUrl || !['http:', 'https:'].includes(targetUrl.protocol) || !targetUrl.pathname.startsWith('/api/')) {
+            res.statusCode = 403;
+            res.end(JSON.stringify({ error: 'Destino do proxy não autorizado' }));
+            return;
+          }
 
           const forwardHeaders = {};
           if (req.headers['authorization']) {
@@ -39,7 +50,6 @@ function haProxyPlugin() {
 
           res.statusCode = response.status;
           res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
-          res.setHeader('Access-Control-Allow-Origin', '*');
           const body = await response.text();
           res.end(body);
         } catch (err) {

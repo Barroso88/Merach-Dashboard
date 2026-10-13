@@ -246,7 +246,8 @@ export function deleteCustomRoute(routeId) {
     const existing = getStoredCustomRoutes();
     const updated = existing.filter(r => r.id !== routeId);
     localStorage.setItem(CUSTOM_ROUTES_KEY, JSON.stringify(updated));
-    syncRoutesToServer(updated);
+    // The server POST endpoint merges, so deletions must be sent explicitly
+    deleteRouteOnServer(routeId);
     return updated;
   } catch (err) {
     console.error('Error deleting custom route:', err);
@@ -260,6 +261,18 @@ async function syncRoutesToServer(routes) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(routes)
+    });
+  } catch {
+    // Graceful fallback
+  }
+}
+
+async function deleteRouteOnServer(routeId) {
+  try {
+    await fetch(`/api/routes?id=${encodeURIComponent(routeId)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: routeId })
     });
   } catch {
     // Graceful fallback
