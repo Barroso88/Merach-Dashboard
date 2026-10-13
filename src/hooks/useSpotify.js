@@ -7,6 +7,12 @@ const DEVICE_KEY = 'merach_spotify_device';
 // HA media_player feature bits
 const FEATURE_PAUSE = 1;
 const FEATURE_PLAY = 16384;
+const FEATURE_VOLUME_SET = 4;
+const FEATURE_VOLUME_SET_REAL = 4096;
+const FEATURE_SHUFFLE = 32768;
+const FEATURE_REPEAT = 262144;
+
+const isWebPlayer = (name = '') => /web player/i.test(name);
 
 function rememberDevice(name) {
   try { localStorage.setItem(DEVICE_KEY, name); } catch { /* ignore */ }
@@ -53,6 +59,8 @@ export default function useSpotify(haService, enabled) {
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [shortcuts, setShortcuts] = useState(loadShortcuts);
+  // Optimistic overrides (e.g. paused right after tapping pause) until HA catches up
+  const [optimistic, setOptimistic] = useState(null); // { state?, attributes?, until }
   const entityRef = useRef(null);
 
   // Discover the Spotify media player once HA is configured
@@ -100,7 +108,7 @@ export default function useSpotify(haService, enabled) {
   }, [entityId, refresh]);
 
   // Smooth progress bar between polls while playing
-  const isPlaying = state?.state === 'playing';
+  const isPlaying = (optimistic?.state || state?.state) === 'playing';
   useEffect(() => {
     if (!isPlaying) return undefined;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -120,7 +128,12 @@ export default function useSpotify(haService, enabled) {
       throw new Error('Nenhum aparelho Spotify disponível. Abre a app Spotify no iPad (ou numa coluna) e volta a tentar.');
     }
     const wanted = preferredDevice();
-    const device = sources.includes(wanted) ? wanted : (current.attributes?.source && sources.includes(current.attributes.source) ? current.attributes.source : sources[0]);
+    const appDevice = sources.find(src => !isWebPlayer(src));
+    const device = sources.includes(wanted)
+      ? wanted
+      : (current.attributes?.source && sources.includes(current.attributes.source) && !isWebPlayer(current.attributes.source)
+        ? current.attributes.source
+        : appDevice || sources[0]);
     await haService.callService('media_player', 'select_source', { entity_id: id, source: device });
 
     for (let i = 0; i < 10; i++) {
@@ -135,23 +148,45 @@ export default function useSpotify(haService, enabled) {
     throw new Error(`O aparelho "${device}" não ficou ativo. Abre a app Spotify nesse aparelho e volta a tentar.`);
   }, [haService]);
 
-  const call = useCallback(async (service, data = {}, { activate = false } = {}) => {
+  // The HA Spotify integration only polls Spotify every ~30s; ask it to refresh now,
+  // then re-read a few times so the UI follows the real player quickly.
+  const syncSoon = useCallback(() => {
+    const id = entityRef.current;
+    if (!id) return;
+    const kick = () => haService.callService('homeassistant', 'update_entity', { entity_id: id }).catch(() => {}).then(refresh);
+    [400, 1500, 3500].forEach((ms) => setTimeout(kick, ms));
+  }, [haService, refresh]);
+
+  const call = useCallback(async (service, data = {}, { activate = false, expect = null } = {}) => {
     const id = entityRef.current;
     if (!id) return;
     setBusy(true);
+    if (expect) setOptimistic({ ...expect, until: Date.now() + 8000 });
     try {
       if (activate) await ensureActiveDevice();
       await haService.callService('media_player', service, { entity_id: id, ...data });
       setError(null);
-      setTimeout(refresh, 500);
+      syncSoon();
     } catch (err) {
+      setOptimistic(null);
       setError(friendlyError(err.message));
     } finally {
       setBusy(false);
     }
-  }, [haService, refresh, ensureActiveDevice]);
+  }, [haService, ensureActiveDevice, syncSoon]);
 
-  const attrs = state?.attributes || {};
+  // Drop the optimistic override once HA reports the expected state (or it times out)
+  useEffect(() => {
+    if (!optimistic) return;
+    const matches = (!optimistic.state || state?.state === optimistic.state) &&
+      Object.entries(optimistic.attributes || {}).every(([k, v]) => state?.attributes?.[k] === v);
+    if (matches || Date.now() > optimistic.until) setOptimistic(null);
+  }, [state, optimistic, now]);
+
+  const effectiveState = optimistic
+    ? { ...state, state: optimistic.state || state?.state, attributes: { ...(state?.attributes || {}), ...(optimistic.attributes || {}) } }
+    : state;
+  const attrs = effectiveState?.attributes || {};
   const duration = Number(attrs.media_duration || 0);
   let position = Number(attrs.media_position || 0);
   if (isPlaying && attrs.media_position_updated_at) {
@@ -161,6 +196,7 @@ export default function useSpotify(haService, enabled) {
 
   const features = Number(attrs.supported_features || 0);
   const canControl = Boolean(features & FEATURE_PLAY || features & FEATURE_PAUSE);
+  const supportsVolume = Boolean(features & FEATURE_VOLUME_SET || features & FEATURE_VOLUME_SET_REAL);
 
   const saveShortcuts = (list) => {
     setShortcuts(list);
@@ -174,7 +210,7 @@ export default function useSpotify(haService, enabled) {
   return {
     available: Boolean(entityId),
     entityId,
-    status: state?.state || (entityId ? 'loading' : 'unavailable'), // playing | paused | idle | off | unavailable
+    status: effectiveState?.state || (entityId ? 'loading' : 'unavailable'), // playing | paused | idle | off | unavailable
     isPlaying,
     hasMedia: Boolean(attrs.media_title),
     title: attrs.media_title || '',
@@ -189,19 +225,28 @@ export default function useSpotify(haService, enabled) {
     source: attrs.source || null,
     sources: Array.isArray(attrs.source_list) ? attrs.source_list : [],
     canControl,
+    supportsVolume,
+    supportsShuffle: !canControl || Boolean(features & FEATURE_SHUFFLE),
+    supportsRepeat: !canControl || Boolean(features & FEATURE_REPEAT),
+    isWebPlayerSource: isWebPlayer(attrs.source),
     error,
     busy,
     shortcuts,
     actions: {
-      play: () => call('media_play', {}, { activate: true }),
-      pause: () => call('media_pause'),
-      toggle: () => (isPlaying ? call('media_pause') : call('media_play', {}, { activate: true })),
+      play: () => call('media_play', {}, { activate: true, expect: { state: 'playing' } }),
+      pause: () => call('media_pause', {}, { expect: { state: 'paused' } }),
+      toggle: () => (isPlaying
+        ? call('media_pause', {}, { expect: { state: 'paused' } })
+        : call('media_play', {}, { activate: true, expect: { state: 'playing' } })),
       next: () => call('media_next_track', {}, { activate: true }),
       previous: () => call('media_previous_track', {}, { activate: true }),
-      setVolume: (v) => call('volume_set', { volume_level: Math.max(0, Math.min(1, v)) }),
-      setShuffle: (on) => call('shuffle_set', { shuffle: on }),
+      setVolume: (v) => {
+        const level = Math.max(0, Math.min(1, v));
+        return call('volume_set', { volume_level: level }, { expect: { attributes: { volume_level: level } } });
+      },
+      setShuffle: (on) => call('shuffle_set', { shuffle: on }, { expect: { attributes: { shuffle: on } } }),
       cycleRepeat: () => call('repeat_set', { repeat: { off: 'all', all: 'one', one: 'off' }[attrs.repeat || 'off'] || 'off' }),
-      selectSource: (source) => { rememberDevice(source); return call('select_source', { source }); },
+      selectSource: (source) => { rememberDevice(source); return call('select_source', { source }, { expect: { attributes: { source } } }); },
       playUri: ({ uri, type }) => call('play_media', { media_content_id: uri, media_content_type: type === 'track' ? 'music' : type }, { activate: true }),
       addShortcut: (name, link) => {
         const parsed = toSpotifyUri(link);
