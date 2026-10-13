@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, X, Check, Trash2, Pencil } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Plus, X, Check, Trash2, Pencil, Camera } from 'lucide-react';
 import { PROFILE_COLORS, nextProfileColor } from '../services/profileService';
 
 function Avatar({ profile, size = 72, active = false }) {
@@ -17,33 +17,115 @@ function Avatar({ profile, size = 72, active = false }) {
           : `inset 0 1px 0 rgba(255,255,255,0.35), 0 10px 24px -10px ${profile.color}`
       }}
     >
-      {initial}
+      {profile.photo ? (
+        <img
+          src={profile.photo}
+          alt={profile.name}
+          className="absolute inset-0 w-full h-full rounded-full object-cover"
+          draggable={false}
+        />
+      ) : (
+        initial
+      )}
     </span>
   );
 }
 
 export { Avatar };
 
+// Centre-crop to a square and downscale so profile photos stay small (~20–40 KB)
+function resizeImageToDataUrl(file, size = 320) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - side) / 2;
+      const sy = (img.naturalHeight - side) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Não foi possível ler a imagem'));
+    };
+    img.src = url;
+  });
+}
+
 function ProfileForm({ initial, onSubmit, onCancel, onDelete, canDelete, submitLabel }) {
   const [name, setName] = useState(initial.name || '');
   const [color, setColor] = useState(initial.color);
   const [theme, setTheme] = useState(initial.theme || 'cyan');
+  const [photo, setPhoto] = useState(initial.photo || null);
+  const [photoError, setPhotoError] = useState(null);
+  const fileRef = useRef(null);
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      setPhotoError(null);
+      setPhoto(await resizeImageToDataUrl(file));
+    } catch (err) {
+      setPhotoError(err.message);
+    }
+  };
   const [confirmDelete, setConfirmDelete] = useState(false);
   const trimmed = name.trim();
 
   return (
     <div className="mt-6 rounded-2xl p-4 bg-white/[0.03] ring-1 ring-white/[0.07] text-left" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center gap-4">
-        <Avatar profile={{ name: trimmed || '?', color }} size={52} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="relative shrink-0 rounded-full active:scale-95 transition-transform"
+          title={photo ? 'Mudar foto' : 'Adicionar foto'}
+        >
+          <Avatar profile={{ name: trimmed || '?', color, photo }} size={64} />
+          <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full flex items-center justify-center bg-white text-slate-900 ring-2 ring-[#0b1220] shadow">
+            <Camera className="w-3.5 h-3.5" strokeWidth={2.4} />
+          </span>
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
         <input
           autoFocus
           value={name}
           maxLength={40}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && trimmed) onSubmit({ name: trimmed, color, theme }); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && trimmed) onSubmit({ name: trimmed, color, theme, photo: photo || null }); }}
           placeholder="Nome"
           className="flex-1 min-w-0 rounded-xl px-4 py-3 text-base font-semibold text-white bg-black/30 ring-1 ring-white/10 focus:ring-2 focus:ring-sky-400/60 outline-none placeholder:text-slate-600"
         />
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-200 bg-white/5 ring-1 ring-white/10 hover:bg-white/10"
+        >
+          <Camera className="w-3.5 h-3.5" />
+          {photo ? 'Mudar foto' : 'Carregar foto'}
+        </button>
+        {photo && (
+          <button
+            type="button"
+            onClick={() => setPhoto(null)}
+            className="px-3 py-2 rounded-xl text-[12px] font-semibold text-rose-300 bg-rose-500/10 ring-1 ring-rose-400/25 hover:bg-rose-500/20"
+          >
+            Remover foto
+          </button>
+        )}
+        {photoError && <span className="text-[11px] text-rose-300">{photoError}</span>}
       </div>
 
       <div className="mt-4">
@@ -106,7 +188,7 @@ function ProfileForm({ initial, onSubmit, onCancel, onDelete, canDelete, submitL
             <button
               type="button"
               disabled={!trimmed}
-              onClick={() => onSubmit({ name: trimmed, color, theme })}
+              onClick={() => onSubmit({ name: trimmed, color, theme, photo: photo || null })}
               className="flex-1 py-3 rounded-xl text-[13px] font-semibold text-white disabled:opacity-40 transition-opacity"
               style={{ background: `linear-gradient(160deg, ${color}, ${color}aa)`, boxShadow: `0 10px 24px -12px ${color}` }}
             >
