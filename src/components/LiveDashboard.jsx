@@ -231,8 +231,6 @@ export default function LiveDashboard({
           <div className="lg:col-span-4 w-full max-w-sm flex flex-col items-center justify-center">
             <SessionStatsPanel
               sessionStats={sessionStats}
-              telemetry={telemetry}
-              settings={settings}
               workoutStatus={workoutStatus}
               isRose={isRose}
               distanceColor={distanceColor}

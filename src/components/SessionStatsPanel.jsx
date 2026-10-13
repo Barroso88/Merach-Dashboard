@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Flame, Gauge, RotateCw, Zap, Dumbbell, HeartPulse } from 'lucide-react';
+import { Route, Flame, Gauge, RotateCw } from 'lucide-react';
 
 function IconTile({ icon: Icon, color }) {
   return (
@@ -31,8 +31,6 @@ function MiniStat({ icon: Icon, label, value, unit, color }) {
 
 export default function SessionStatsPanel({
   sessionStats,
-  telemetry,
-  settings,
   workoutStatus = 'idle',
   isRose = false,
   distanceColor = '#38bdf8',
@@ -42,11 +40,6 @@ export default function SessionStatsPanel({
 }) {
   const distanceKm = Number(sessionStats?.distanceKm || 0);
   const caloriesKcal = Number(sessionStats?.caloriesKcal || 0);
-
-  const hasSensors = Boolean(
-    settings?.haEntities?.power || settings?.haEntities?.resistance || settings?.haEntities?.heartRate ||
-    telemetry?.power > 0 || telemetry?.resistance > 0 || telemetry?.heartRate > 0
-  );
 
   const live = {
     running: { label: 'Ao vivo', dot: 'bg-emerald-400', text: 'text-emerald-300', ping: true },
@@ -118,15 +111,6 @@ export default function SessionStatsPanel({
             </div>
           </div>
         </div>
-
-        {/* Optional Merach sensors */}
-        {hasSensors && (
-          <div className="relative grid grid-cols-3 gap-2 mt-4">
-            <MiniStat icon={Zap} label="Potência" value={telemetry?.power ?? 0} unit="W" color="#fbbf24" />
-            <MiniStat icon={Dumbbell} label="Resist." value={telemetry?.resistance ?? '--'} unit="nv" color="#c084fc" />
-            <MiniStat icon={HeartPulse} label="Pulso" value={telemetry?.heartRate ?? '--'} unit="bpm" color="#fb7185" />
-          </div>
-        )}
 
         {/* Session peaks */}
         <div className="relative grid grid-cols-2 gap-2 mt-4">
