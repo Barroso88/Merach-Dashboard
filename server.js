@@ -278,25 +278,75 @@ const MIME_TYPES = {
   '.ttf': 'font/ttf'
 };
 
+// Origins the /ha-proxy is allowed to reach: only the configured Home Assistant instance(s)
+function getAllowedHaOrigins() {
+  const origins = new Set();
+  const candidates = [process.env.HA_URL, readJsonFile(SETTINGS_FILE, {})?.haUrl];
+  for (const url of candidates) {
+    if (!url) continue;
+    try {
+      origins.add(new URL(url).origin);
+    } catch {
+      // Ignore malformed URLs
+    }
+  }
+  return origins;
+}
+
+function isAllowedProxyTarget(target) {
+  let url;
+  try {
+    url = new URL(target);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+  if (!url.pathname.startsWith('/api/')) return false;
+  return getAllowedHaOrigins().has(url.origin);
+}
+
+// The Postgres password is never sent to the browser; this placeholder stands in for it
+const PG_PASSWORD_MASK = '********';
+
+function getStoredPgPassword() {
+  return process.env.PG_PASSWORD ?? process.env.PGPASSWORD ?? readJsonFile(SETTINGS_FILE, {})?.postgresConfig?.password ?? '';
+}
+
+function resolvePgConfig(pgConfig) {
+  if (!pgConfig || pgConfig.password !== PG_PASSWORD_MASK) return pgConfig;
+  return { ...pgConfig, password: getStoredPgPassword() };
+}
+
 const server = http.createServer(async (req, res) => {
-  // CORS Preflight
+  // No CORS headers: the SPA is served from this same origin, so cross-origin
+  // pages must not be able to read settings/tokens or call the API.
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': '*'
-    });
+    res.writeHead(204);
     return res.end();
   }
 
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
+  // Mutating API calls must be JSON. Cross-origin JSON requests need a CORS preflight,
+  // which this server never grants, so this blocks CSRF from other websites.
+  if (parsedUrl.pathname.startsWith('/api/') && ['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const ct = (req.headers['content-type'] || '').toLowerCase();
+    if (!ct.startsWith('application/json')) {
+      res.writeHead(415, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'Content-Type must be application/json' }));
+    }
+  }
+
   // 1. Transparent CORS proxy for Home Assistant
   if (parsedUrl.pathname === '/ha-proxy') {
     const target = parsedUrl.searchParams.get('target');
     if (!target) {
-      res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(400, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ error: 'Missing target URL parameter' }));
+    }
+    if (!isAllowedProxyTarget(target)) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'Destino do proxy não autorizado. Guarde primeiro o URL do Home Assistant nas definições.' }));
     }
 
     try {
@@ -316,12 +366,11 @@ const server = http.createServer(async (req, res) => {
 
       const body = await targetRes.text();
       res.writeHead(targetRes.status, {
-        'Content-Type': targetRes.headers.get('content-type') || 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Content-Type': targetRes.headers.get('content-type') || 'application/json'
       });
       return res.end(body);
     } catch (err) {
-      res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(502, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ error: `Falha no proxy local: ${err.message}` }));
     }
   }
@@ -337,19 +386,19 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST') {
       try {
         const body = await readBody(req);
-        const testRes = await connectPostgres(body);
+        const testRes = await connectPostgres(resolvePgConfig(body));
         if (testRes.success) {
-          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
           return res.end(JSON.stringify({ 
             success: true, 
             message: 'Ligação ao PostgreSQL estabelecida com sucesso! Tabelas verificadas.' 
           }));
         } else {
-          res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.writeHead(400, { 'Content-Type': 'application/json' });
           return res.end(JSON.stringify({ success: false, error: testRes.error }));
         }
       } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(500, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: false, error: err.message }));
       }
     }
@@ -394,7 +443,7 @@ const server = http.createServer(async (req, res) => {
         host: envPg.host || savedPg.host || '',
         port: envPg.port || savedPg.port || 5432,
         user: envPg.user || savedPg.user || 'postgres',
-        password: envPg.password !== undefined ? envPg.password : (savedPg.password || ''),
+        password: (envPg.password !== undefined ? envPg.password : savedPg.password) ? PG_PASSWORD_MASK : '',
         database: envPg.database || savedPg.database || 'merach',
         ...(envPg.databaseUrl ? { databaseUrl: envPg.databaseUrl } : {})
       };
@@ -406,13 +455,16 @@ const server = http.createServer(async (req, res) => {
         postgresConnected: isPostgresReady,
         postgresError: lastPostgresError
       };
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(merged));
     }
 
     if (req.method === 'POST') {
       try {
         const body = await readBody(req);
+        if (body.postgresConfig) {
+          body.postgresConfig = resolvePgConfig(body.postgresConfig);
+        }
         let existing = {};
         if (isPostgresReady && dbPool) {
           try {
@@ -449,15 +501,15 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ 
           success: true, 
-          settings: updated, 
+          settings: { ...updated, postgresConfig: { ...(updated.postgresConfig || {}), password: updated.postgresConfig?.password ? PG_PASSWORD_MASK : '' } }, 
           postgresConnected: isPostgresReady,
           postgresError: lastPostgresError 
         }));
       } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: err.message }));
       }
     }
@@ -487,7 +539,7 @@ const server = http.createServer(async (req, res) => {
         workouts = [];
       }
 
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(workouts));
     }
 
@@ -519,10 +571,10 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true, count: list.length, postgresConnected: isPostgresReady }));
       } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: err.message }));
       }
     }
@@ -544,10 +596,10 @@ const server = http.createServer(async (req, res) => {
             }
           }
         }
-        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true }));
       } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: err.message }));
       }
     }
@@ -573,7 +625,7 @@ const server = http.createServer(async (req, res) => {
       } else {
         routes = readJsonFile(ROUTES_FILE, []);
       }
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(routes || []));
     }
 
@@ -602,10 +654,10 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true, count: list.length, postgresConnected: isPostgresReady }));
       } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: err.message }));
       }
     }
@@ -627,10 +679,10 @@ const server = http.createServer(async (req, res) => {
             }
           }
         }
-        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true }));
       } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: err.message }));
       }
     }

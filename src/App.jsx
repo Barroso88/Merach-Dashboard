@@ -7,6 +7,7 @@ import WorkoutSummaryModal from './components/WorkoutSummaryModal';
 import WorkoutDetailModal from './components/WorkoutDetailModal';
 import ConnectionSettingsModal from './components/ConnectionSettingsModal';
 import ModalErrorBoundary from './components/ModalErrorBoundary';
+import MotivationalPopup from './components/MotivationalPopup';
 
 import { MerachSimulator } from './services/telemetrySimulator';
 import { HomeAssistantService } from './services/homeAssistantService';
@@ -580,19 +581,15 @@ export default function App() {
 
       {/* Floating Bar Invocation Button (Cockpit Immersion Mode) */}
       {isNavbarCollapsed && (workoutStatus === 'running' || workoutStatus === 'paused') && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 animate-fadeIn">
+        <div className="fixed top-[calc(0.75rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-50 animate-fadeIn">
           <button
             onClick={() => setIsNavbarCollapsed(false)}
-            className={`group flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold backdrop-blur-xl border shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer ${
-              isRose
-                ? 'bg-[#260431]/92 hover:bg-[#380743] border-[#ff2d75]/50 text-[#ff85b3] hover:text-white shadow-[0_0_20px_rgba(255,45,117,0.35)]'
-                : 'bg-slate-900/90 hover:bg-slate-800 border-sky-500/40 text-sky-300 hover:text-white shadow-[0_0_20px_rgba(56,189,248,0.25)]'
-            }`}
-            title="Invocar Barra Superior"
+            className="group flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full text-[11px] font-medium tracking-[0.08em] text-slate-300 hover:text-white transition-all active:scale-95 cursor-pointer bg-white/[0.05] hover:bg-white/[0.09] ring-1 ring-white/[0.09] backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_-12px_rgba(0,0,0,0.9)]"
+            title="Mostrar barra superior"
           >
-            <ChevronDown className="w-3.5 h-3.5 transition-transform group-hover:translate-y-0.5" />
-            <span className="tracking-wide">Barra Superior</span>
-            <span className={`w-2 h-2 rounded-full ${isRose ? 'bg-[#ff2d75]' : 'bg-emerald-400'} animate-pulse`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${isRose ? 'bg-[#ff2d75] shadow-[0_0_6px_#ff2d75]' : 'bg-sky-400 shadow-[0_0_6px_#38bdf8]'}`} />
+            <span>Menu</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 transition-transform group-hover:translate-y-0.5" />
           </button>
         </div>
       )}
@@ -622,7 +619,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className={`flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 relative z-10 transition-all duration-500 ${
-        isNavbarCollapsed && (workoutStatus === 'running' || workoutStatus === 'paused') ? 'pt-10 pb-24 md:pb-6' : 'pt-6 pb-24 md:py-6'
+        isNavbarCollapsed && (workoutStatus === 'running' || workoutStatus === 'paused') ? 'pt-[calc(2.5rem+env(safe-area-inset-top))] pb-24 md:pb-6 tab:pb-4' : 'pt-6 pb-24 md:py-6 tab:py-4'
       }`}>
         {activeTab === 'live' ? (
           <LiveDashboard
@@ -666,6 +663,15 @@ export default function App() {
           currentTheme={currentTheme}
         />
       )}
+
+      {/* Motivational toast every 5 minutes of riding (shown in gauges and route modes) */}
+      <MotivationalPopup
+        workoutStatus={workoutStatus}
+        elapsedSeconds={elapsedSeconds}
+        targetSeconds={targetSeconds}
+        sessionStats={sessionStats}
+        themeConfig={activeTheme}
+      />
 
       {/* Modal: Workout Completion Celebration */}
       <WorkoutSummaryModal

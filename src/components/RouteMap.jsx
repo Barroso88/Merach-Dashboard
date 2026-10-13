@@ -35,7 +35,6 @@ import {
 } from '../services/routePlannerService';
 import CarView3DMap from './CarView3DMap';
 import RoutePlannerModal from './RoutePlannerModal';
-import { getStoredSettings } from '../services/storageService';
 
 export default function RouteMap({
   currentDistanceKm = 0,
@@ -51,22 +50,10 @@ export default function RouteMap({
   onResume,
   onStop,
   onReset,
-  onExitRouteMode,
-  googleMapsApiKey
+  onExitRouteMode
 }) {
   const isRose = themeConfig?.id === 'rose';
   const primaryColor = isRose ? '#ff2d75' : '#38bdf8';
-  const secondaryColor = isRose ? '#9400D3' : '#10b981';
-
-  // Google Maps API Key resolution
-  const effectiveApiKey = useMemo(() => {
-    return (
-      googleMapsApiKey ||
-      getStoredSettings()?.googleMapsApiKey ||
-      import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-      'AIzaSyAvscR3r1g4VGLbRpdKoC7DtB9Ezla_oac'
-    ).trim();
-  }, [googleMapsApiKey]);
 
   // View Mode: 'frontal3d' (default - Visão Frontal Carro 3D) | 'aerial2d' (Visão Aérea 2D)
   const [viewMode, setViewMode] = useState('frontal3d');

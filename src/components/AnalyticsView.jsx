@@ -408,125 +408,47 @@ export default function AnalyticsView({
         </div>
       </div>
 
-      {/* Statistical Summary Cards for Selected Period - 6-Card Executive Cockpit Grid */}
+      {/* Statistical Summary Cards for Selected Period - each card fully filled with its own colour */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
-        {/* Total Workouts */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-sky-500/40 ${
-          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
-        }`}>
-          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Total Treinos</span>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              isRose ? 'bg-[#ff2d75]/20 text-[#ff85b3]' : 'bg-sky-500/10 text-sky-400'
-            }`}>
-              <Calendar className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl lg:text-3xl font-black font-mono text-white">
-            {stats.totalCount}
-          </div>
-          <span className={`text-[10px] mt-1 ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>Sessões realizadas</span>
-        </div>
+        {[
+          { key: 'count', label: 'Total Treinos', icon: Calendar, from: '#8b5cf6', to: '#5b21b6', value: stats.totalCount, unit: '', sub: 'Sessões realizadas' },
+          { key: 'time', label: 'Tempo Total', icon: Clock, from: '#0ea5e9', to: '#075985', value: stats.totalTimeFormatted, unit: '', sub: `Média: ${stats.avgTimeFormatted}` },
+          { key: 'distance', label: 'Distância', icon: MapPin, from: '#10b981', to: '#065f46', value: Number(stats.totalDistance || 0).toFixed(1), unit: 'km', sub: `Média: ${stats.avgDistancePerWorkout} km/treino` },
+          { key: 'calories', label: 'Calorias', icon: Flame, from: '#f97316', to: '#9a3412', value: Number(stats.totalCalories || 0).toFixed(1), unit: 'kcal', sub: `Média: ${stats.avgCaloriesPerWorkout} kcal/treino` },
+          { key: 'speed', label: 'Velocidade Média', icon: TrendingUp, from: '#f43f5e', to: '#9f1239', value: Number(stats.avgSpeed || 0).toFixed(1), unit: 'km/h', sub: `Pico: ${Number(stats.maxSpeedRecorded || 0).toFixed(1)} km/h` },
+          { key: 'cadence', label: 'Cadência Média', icon: Activity, from: '#eab308', to: '#854d0e', value: Number(stats.avgCadence || 0).toFixed(1), unit: 'rpm', sub: 'Ritmo sustentado' }
+        ].map(({ key, label, icon: Icon, from, to, value, unit, sub }) => (
+          <div
+            key={key}
+            className="group relative rounded-[20px] p-4 overflow-hidden flex flex-col justify-between text-white transition-all duration-300 hover:-translate-y-0.5"
+            style={{
+              background: `linear-gradient(145deg, ${from} 0%, ${to} 100%)`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), inset 0 0 0 1px rgba(255,255,255,0.08), 0 18px 36px -18px ${from}, 0 24px 48px -28px rgba(0,0,0,0.9)`
+            }}
+          >
+            {/* Gloss + texture */}
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.22) 0%, transparent 55%)' }} />
+            <Icon className="absolute -right-4 -bottom-5 w-24 h-24 text-white opacity-[0.10] group-hover:opacity-[0.16] transition-opacity pointer-events-none" strokeWidth={1.5} />
 
-        {/* Total Time */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-indigo-500/40 ${
-          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
-        }`}>
-          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Tempo Total</span>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              isRose ? 'bg-[#9400D3]/20 text-purple-300' : 'bg-indigo-500/10 text-indigo-400'
-            }`}>
-              <Clock className="w-4 h-4" />
+            <div className="relative flex items-center justify-between mb-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">{label}</span>
+              <span className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 bg-white/20 ring-1 ring-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
+                <Icon className="w-4 h-4 text-white" />
+              </span>
             </div>
-          </div>
-          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff85b3' : '#a5b4fc' }}>
-            {stats.totalTimeFormatted}
-          </div>
-          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`} title={`Média: ${stats.avgTimeFormatted}`}>
-            Média: {stats.avgTimeFormatted}
-          </span>
-        </div>
 
-        {/* Total Distance */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-emerald-500/40 ${
-          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
-        }`}>
-          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Distância</span>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              isRose ? 'bg-[#ff2d75]/20 text-[#ff2d75]' : 'bg-emerald-500/10 text-emerald-400'
-            }`}>
-              <MapPin className="w-4 h-4" />
+            <div className="relative flex items-baseline gap-1.5">
+              <span className="text-2xl lg:text-[1.75rem] font-bold tabular-nums tracking-tight leading-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]">
+                {value}
+              </span>
+              {unit && <span className="text-[11px] font-semibold uppercase text-white/75">{unit}</span>}
             </div>
-          </div>
-          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff2d75' : '#10b981' }}>
-            {Number(stats.totalDistance || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">km</span>
-          </div>
-          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>
-            Média: {stats.avgDistancePerWorkout} km/treino
-          </span>
-        </div>
 
-        {/* Total Calories */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-amber-500/40 ${
-          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
-        }`}>
-          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Calorias</span>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              isRose ? 'bg-[#9400D3]/25 text-[#9400D3]' : 'bg-amber-500/10 text-amber-400'
-            }`}>
-              <Flame className="w-4 h-4" />
-            </div>
+            <span className="relative mt-2 text-[10px] font-medium truncate text-white/70" title={sub}>
+              {sub}
+            </span>
           </div>
-          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#9400D3' : '#fbbf24' }}>
-            {Number(stats.totalCalories || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">kcal</span>
-          </div>
-          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`}>
-            Média: {stats.avgCaloriesPerWorkout} kcal/treino
-          </span>
-        </div>
-
-        {/* Average Speed */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-cyan-500/40 ${
-          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
-        }`}>
-          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Velocidade Média</span>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              isRose ? 'bg-[#ff2d75]/20 text-[#ff85b3]' : 'bg-cyan-500/10 text-cyan-400'
-            }`}>
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff85b3' : '#38bdf8' }}>
-            {Number(stats.avgSpeed || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">km/h</span>
-          </div>
-          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-pink-300/70' : 'text-slate-500'}`}>
-            Pico: {Number(stats.maxSpeedRecorded || 0).toFixed(1)} km/h
-          </span>
-        </div>
-
-        {/* Average Cadence */}
-        <div className={`rounded-2xl p-4 border flex flex-col justify-between transition-all hover:border-emerald-500/40 ${
-          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'glass-panel border-slate-800/80'
-        }`}>
-          <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-            <span className={isRose ? 'text-pink-200' : 'text-slate-400'}>Cadência Média</span>
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-              isRose ? 'bg-[#9400D3]/20 text-purple-300' : 'bg-emerald-500/10 text-emerald-400'
-            }`}>
-              <Activity className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl lg:text-3xl font-black font-mono" style={{ color: isRose ? '#ff2d75' : '#34d399' }}>
-            {Number(stats.avgCadence || 0).toFixed(1)} <span className="text-xs font-sans font-medium text-slate-400">RPM</span>
-          </div>
-          <span className={`text-[10px] mt-1 truncate ${isRose ? 'text-purple-300/70' : 'text-slate-500'}`}>
-            Ritmo sustentado
-          </span>
-        </div>
+        ))}
       </div>
 
       {/* Historical Performance Chart - 30/31 Day Calendar Grid */}

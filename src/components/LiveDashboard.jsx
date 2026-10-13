@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import SportNeedleGauge from './SportNeedleGauge';
+import SessionStatsPanel from './SessionStatsPanel';
+import { premiumSurfaceStyle, accentHairlineStyle } from '../constants/surfaces';
 import WorkoutControls from './WorkoutControls';
 import RouteMap from './RouteMap';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import { Gauge, Map, Navigation, ChevronRight } from 'lucide-react';
 import { PRESET_ROUTES } from '../services/routesData';
-import { getStoredCustomRoutes } from '../services/routePlannerService';
 
 export default function LiveDashboard({
   telemetry,
@@ -30,21 +31,21 @@ export default function LiveDashboard({
   const setDashboardMode = setControlledMode !== undefined ? setControlledMode : setInternalMode;
 
   // Dynamic responsive gauge sizing (compact on tablets to avoid scrolling!)
-  const [gaugeSize, setGaugeSize] = useState(() => {
-    if (typeof window !== 'undefined') {
-      if (window.innerWidth < 640) return 205;
-      if (window.innerWidth < 1024) return 230;
-      return 265;
+  // iPad landscape (1024–1279px) has vertical room to spare, so gauges grow there for readability
+  const computeGaugeSize = () => {
+    if (typeof window === 'undefined') return 265;
+    if (window.innerWidth < 640) return 205;
+    if (window.innerWidth < 1024) return 230;
+    if (window.innerWidth < 1280 && window.innerWidth > window.innerHeight) {
+      if (window.innerHeight >= 820) return 305;
+      if (window.innerHeight >= 740) return 285;
     }
     return 265;
-  });
+  };
+  const [gaugeSize, setGaugeSize] = useState(computeGaugeSize);
 
   React.useEffect(() => {
-    const updateSize = () => {
-      if (window.innerWidth < 640) setGaugeSize(205);
-      else if (window.innerWidth < 1024) setGaugeSize(230);
-      else setGaugeSize(265);
-    };
+    const updateSize = () => setGaugeSize(computeGaugeSize());
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
   }, []);
@@ -70,7 +71,6 @@ export default function LiveDashboard({
 
   const distanceColor = themeConfig?.distanceColor || '#38bdf8';
   const caloriesColor = themeConfig?.caloriesColor || '#fbbf24';
-  const glowColor = themeConfig?.glowColor || 'rgba(56, 189, 248, 0.15)';
 
   const isRose = themeConfig?.id === 'rose';
 
@@ -102,7 +102,7 @@ export default function LiveDashboard({
   }
 
   return (
-    <div className="space-y-3.5 md:space-y-4 animate-fadeIn pb-6 max-w-6xl w-full mx-auto flex flex-col items-center">
+    <div className="space-y-3.5 md:space-y-4 tab:space-y-3 animate-fadeIn pb-6 tab:pb-2 max-w-6xl w-full mx-auto flex flex-col items-center">
       {/* Centered Workout Timer & Controls (Visible only in Gauges mode) */}
       <div className="w-full flex justify-center">
         <div className="w-full max-w-3xl">
@@ -117,12 +117,13 @@ export default function LiveDashboard({
             onStop={onStop}
             onReset={onReset}
             themeConfig={themeConfig}
+            cadence={telemetry?.cadence || 0}
           />
         </div>
       </div>
 
-      {/* Cockpit Mode Switcher: Manómetros vs Percurso GPS */}
-      <div className={`flex items-center gap-1.5 p-1 rounded-2xl border backdrop-blur-xl transition-all ${
+      {/* Cockpit Mode Switcher: Manómetros vs Percurso GPS (hidden on tablet landscape: duplicated in the navbar) */}
+      <div className={`flex tab:hidden items-center gap-1.5 p-1 rounded-2xl border backdrop-blur-xl transition-all ${
         isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'bg-slate-900/80 border-slate-800'
       }`}>
         <button
@@ -156,10 +157,13 @@ export default function LiveDashboard({
         </button>
       </div>
 
-      {/* Active Route Quick-Access Banner */}
-      <div className={`w-full max-w-3xl px-4 py-2.5 rounded-2xl border backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 transition-all ${
-        isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30 shadow-lg' : 'bg-slate-900/80 border-slate-800 shadow-lg'
-      }`}>
+      {/* Active Route Quick-Access Banner (hidden mid-workout on tablet landscape to keep everything on one screen) */}
+      <div
+        className={`w-full max-w-3xl px-4 py-2.5 rounded-[20px] flex flex-wrap items-center justify-between gap-3 transition-all ${
+          workoutStatus !== 'idle' ? 'tab:hidden' : ''
+        }`}
+        style={premiumSurfaceStyle(isRose, speedAccent)}
+      >
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
             isRose ? 'bg-[#ff2d75]/20 text-[#ff85b3] border border-[#ff2d75]/30' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
@@ -167,10 +171,10 @@ export default function LiveDashboard({
             <Navigation className="w-4 h-4" />
           </div>
           <div className="min-w-0 text-left">
-            <span className="block text-xs font-black text-white truncate max-w-[220px] sm:max-w-md">
+            <span className="block text-[13px] font-semibold text-white tracking-tight truncate max-w-[220px] sm:max-w-md">
               {PRESET_ROUTES[0]?.name || 'Marginal Estoril ➔ Cascais ➔ Guincho'}
             </span>
-            <span className="block text-[10px] font-mono text-slate-400">
+            <span className="block text-[10px] font-medium tabular-nums text-slate-400">
               {PRESET_ROUTES[0]?.distanceKm || 12.99} km • +{PRESET_ROUTES[0]?.elevationGain || 95}m D+ • {PRESET_ROUTES[0]?.difficulty || 'Panorâmica'}
             </span>
           </div>
@@ -192,47 +196,20 @@ export default function LiveDashboard({
         </button>
       </div>
 
-      {/* CLUSTER UNIFICADO PREMIUM: GAUGES COM DISTÂNCIA E CALORIAS INTEGRADAS NO MESMO PAINEL */}
-      <div 
-        className="w-full rounded-3xl p-4 md:p-6 lg:p-7 relative overflow-hidden flex flex-col items-center transition-all duration-700"
-        style={{
-          background: themeConfig?.clusterBg || 'linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(8, 12, 20, 0.95) 50%, rgba(5, 8, 14, 0.98) 100%)',
-          backdropFilter: 'blur(25px)',
-          WebkitBackdropFilter: 'blur(25px)',
-          border: `1px solid ${themeConfig?.clusterBorder || 'rgba(255, 255, 255, 0.1)'}`,
-          boxShadow: themeConfig?.clusterShadow || `0 25px 60px -15px rgba(0, 0, 0, 0.8), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 0 35px -5px ${glowColor}`
-        }}
+      {/* INSTRUMENT CLUSTER: SPEED | DISTANCE & CALORIES | CADENCE */}
+      <div
+        className="w-full rounded-[28px] px-4 py-5 md:px-6 md:py-6 lg:px-8 tab:px-6 tab:py-4 relative overflow-hidden flex flex-col items-center transition-colors duration-700"
+        style={premiumSurfaceStyle(isRose, speedAccent)}
       >
-        {/* Carbon Fibre Pattern Background */}
-        <div 
-          className="absolute inset-0 opacity-25 pointer-events-none transition-all duration-700"
-          style={{
-            backgroundImage: isRose 
-              ? `radial-gradient(#4a1538 1.2px, transparent 1.2px), radial-gradient(#4a1538 1.2px, #0e0410 1.2px)`
-              : `radial-gradient(#1e293b 1px, transparent 1px), radial-gradient(#1e293b 1px, #080c14 1px)`,
-            backgroundSize: '18px 18px',
-            backgroundPosition: '0 0, 9px 9px'
-          }}
-        />
+        {/* Top accent hairline */}
+        <div className="absolute top-0 inset-x-10 h-px pointer-events-none" style={accentHairlineStyle(speedAccent, cadenceAccent)} />
+        {/* Soft light pools behind each dial */}
+        <div className="absolute -left-20 top-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full pointer-events-none opacity-[0.07] blur-3xl" style={{ background: speedAccent }} />
+        <div className="absolute -right-20 top-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full pointer-events-none opacity-[0.07] blur-3xl" style={{ background: cadenceAccent }} />
 
-        {/* Ambient Top Glow Line matching theme */}
-        <div 
-          className="absolute top-0 left-1/4 right-1/4 h-[1px]" 
-          style={{
-            background: `linear-gradient(to right, transparent, ${speedAccent}90, ${cadenceAccent}90, transparent)`
-          }}
-        />
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-center justify-items-center relative z-10">
 
-        {/* 4 Titanium Screws in Corner Facets */}
-        <div className={`absolute top-4 left-4 w-2 h-2 rounded-full border shadow-sm ${isRose ? 'bg-pink-900 border-pink-700/70' : 'bg-slate-600 border-slate-500/70'}`} />
-        <div className={`absolute top-4 right-4 w-2 h-2 rounded-full border shadow-sm ${isRose ? 'bg-pink-900 border-pink-700/70' : 'bg-slate-600 border-slate-500/70'}`} />
-        <div className={`absolute bottom-4 left-4 w-2 h-2 rounded-full border shadow-sm ${isRose ? 'bg-pink-900 border-pink-700/70' : 'bg-slate-600 border-slate-500/70'}`} />
-        <div className={`absolute bottom-4 right-4 w-2 h-2 rounded-full border shadow-sm ${isRose ? 'bg-pink-900 border-pink-700/70' : 'bg-slate-600 border-slate-500/70'}`} />
-
-        {/* MAIN INTEGRATED CLUSTER: SPEEDOMETER | DIGITAL TELEMETRY CORE (DIST & CAL) | CADENCE */}
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 lg:gap-6 items-center justify-items-center relative z-10">
-          
-          {/* 1. MANÓMETRO DE VELOCIDADE (Esquerda) */}
+          {/* 1. Speed */}
           <div className="lg:col-span-4 w-full flex flex-col items-center justify-center">
             <SportNeedleGauge
               value={telemetry.speed}
@@ -241,121 +218,31 @@ export default function LiveDashboard({
               majorTickInterval={10}
               minorTickCount={3}
               unit="km/h"
-              title="VELOCIDADE"
+              title="Velocidade"
               zones={speedZones}
               size={gaugeSize}
               accentColor={speedAccent}
+              peak={sessionStats.maxSpeed}
               themeConfig={themeConfig}
             />
           </div>
 
-          {/* 2. HUD CENTRAL DE TELEMETRIA: DISTÂNCIA & CALORIAS (Centro) */}
-          <div className="lg:col-span-4 w-full max-w-sm flex flex-col items-center justify-center lg:pt-4">
-            <div 
-              className="w-full rounded-2xl md:rounded-3xl p-4 md:p-5 border transition-all relative overflow-hidden"
-              style={{
-                background: themeConfig?.hudCardBg || 'linear-gradient(180deg, rgba(12, 18, 30, 0.95) 0%, rgba(6, 10, 18, 0.98) 100%)',
-                borderColor: themeConfig?.hudCardBorder || `${speedAccent}35`,
-                boxShadow: isRose 
-                  ? 'inset 0 0 25px rgba(0, 0, 0, 0.9), 0 10px 30px -5px rgba(244,63,94,0.35)' 
-                  : 'inset 0 0 25px rgba(0, 0, 0, 0.9), 0 10px 30px -5px rgba(0,0,0,0.6)'
-              }}
-            >
-              {/* Subtle vertical accent glow line matching theme */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-1" 
-                style={{
-                  background: `linear-gradient(to right, ${speedAccent}90, ${caloriesColor}90, ${cadenceAccent}90)`
-                }}
-              />
-
-              {/* Bloco 1: DISTÂNCIA PERCORRIDA */}
-              <div className={`flex items-center justify-between p-4 rounded-2xl border mb-3 transition-colors ${
-                themeConfig?.metricItemBg || 'bg-slate-900/70 border-slate-800/80 hover:border-slate-700'
-              }`}>
-                <span 
-                  className="text-xs lg:text-sm font-black uppercase tracking-[0.25em] font-mono text-white"
-                  style={{
-                    textShadow: `0 0 10px ${distanceColor}, 0 0 22px ${distanceColor}95, 0 0 35px ${distanceColor}50`
-                  }}
-                >
-                  DISTÂNCIA
-                </span>
-
-                <div className="flex items-baseline gap-1 text-right">
-                  <span 
-                    className="text-3xl font-black font-mono tracking-tight text-white"
-                    style={{ textShadow: `0 0 15px ${distanceColor}60` }}
-                  >
-                    {Number(sessionStats.distanceKm || 0).toFixed(1)}
-                  </span>
-                  <span className="text-xs font-bold font-mono" style={{ color: distanceColor }}>km</span>
-                </div>
-              </div>
-
-              {/* Bloco 2: CALORIAS GASTAS */}
-              <div className={`flex items-center justify-between p-4 rounded-2xl border transition-colors ${
-                themeConfig?.metricItemBg || 'bg-slate-900/70 border-slate-800/80 hover:border-slate-700'
-              }`}>
-                <span 
-                  className="text-xs lg:text-sm font-black uppercase tracking-[0.25em] font-mono text-white"
-                  style={{
-                    textShadow: `0 0 10px ${caloriesColor}, 0 0 22px ${caloriesColor}95, 0 0 35px ${caloriesColor}50`
-                  }}
-                >
-                  CALORIAS
-                </span>
-
-                <div className="flex items-baseline gap-1 text-right">
-                  <span 
-                    className="text-3xl font-black font-mono tracking-tight"
-                    style={{ 
-                       color: caloriesColor,
-                       textShadow: `0 0 15px ${caloriesColor}60` 
-                     }}
-                  >
-                    {Number(sessionStats.caloriesKcal || 0).toFixed(1)}
-                  </span>
-                  <span className="text-xs font-bold font-mono" style={{ color: caloriesColor }}>kcal</span>
-                </div>
-              </div>
-
-              {/* Optional Advanced Merach Bike Sensors (Power, Resistance, Heart Rate) */}
-              {(settings?.haEntities?.power || settings?.haEntities?.resistance || settings?.haEntities?.heartRate || telemetry?.power > 0 || telemetry?.resistance > 0 || telemetry?.heartRate > 0) && (
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-white/10 text-center font-mono animate-fadeIn">
-                  {/* Potência */}
-                  <div className="p-1.5 rounded-xl bg-white/5 border border-amber-500/30">
-                    <span className="block text-[8px] font-bold text-amber-300 uppercase tracking-wider">Potência</span>
-                    <span className="text-sm font-black text-white">{telemetry?.power ?? 0} <span className="text-[9px] text-amber-300">W</span></span>
-                  </div>
-                  {/* Resistência */}
-                  <div className="p-1.5 rounded-xl bg-white/5 border border-purple-500/30">
-                    <span className="block text-[8px] font-bold text-purple-300 uppercase tracking-wider">Resist.</span>
-                    <span className="text-sm font-black text-white">{telemetry?.resistance ?? '--'} <span className="text-[9px] text-purple-300">Nv</span></span>
-                  </div>
-                  {/* Frequência Cardíaca */}
-                  <div className="p-1.5 rounded-xl bg-white/5 border border-rose-500/30">
-                    <span className="block text-[8px] font-bold text-rose-300 uppercase tracking-wider">Pulso</span>
-                    <span className="text-sm font-black text-white">{telemetry?.heartRate ?? '--'} <span className="text-[9px] text-rose-300">bpm</span></span>
-                  </div>
-                </div>
-              )}
-
-              {/* Micro Telemetry Footer inside the Center HUD */}
-              <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400">
-                <div className="flex items-center gap-1">
-                  <span>Pico Vel:</span>
-                  <strong className="text-white">{sessionStats.maxSpeed} km/h</strong>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span>Pico Cad:</span>
-                  <strong style={{ color: cadenceAccent }}>{sessionStats.maxCadence} RPM</strong>
-                </div>
-              </div>
-            </div>
+          {/* 2. Centre telemetry */}
+          <div className="lg:col-span-4 w-full max-w-sm flex flex-col items-center justify-center">
+            <SessionStatsPanel
+              sessionStats={sessionStats}
+              telemetry={telemetry}
+              settings={settings}
+              workoutStatus={workoutStatus}
+              isRose={isRose}
+              distanceColor={distanceColor}
+              caloriesColor={caloriesColor}
+              speedAccent={speedAccent}
+              cadenceAccent={cadenceAccent}
+            />
           </div>
 
-          {/* 3. MANÓMETRO DE CADÊNCIA (Direita) */}
+          {/* 3. Cadence */}
           <div className="lg:col-span-4 w-full flex flex-col items-center justify-center">
             <SportNeedleGauge
               value={telemetry.cadence}
@@ -363,11 +250,12 @@ export default function LiveDashboard({
               max={140}
               majorTickInterval={20}
               minorTickCount={3}
-              unit="RPM"
-              title="CADÊNCIA"
+              unit="rpm"
+              title="Cadência"
               zones={cadenceZones}
               size={gaugeSize}
               accentColor={cadenceAccent}
+              peak={sessionStats.maxCadence}
               themeConfig={themeConfig}
             />
           </div>

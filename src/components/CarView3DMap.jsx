@@ -5,9 +5,6 @@ import {
   Car,
   MapPin,
   TrendingUp,
-  TrendingDown,
-  Mountain,
-  Navigation2,
   RefreshCw,
   AlertTriangle
 } from 'lucide-react';

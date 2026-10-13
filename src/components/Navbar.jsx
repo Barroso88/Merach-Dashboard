@@ -6,11 +6,54 @@ import {
   Radio,
   Settings,
   LineChart,
-  Palette,
   ChevronUp,
   Gauge,
   Map
 } from 'lucide-react';
+
+// Segmented control used for the main tabs and the cockpit mode switch
+function Segmented({ items, value, onChange, accent }) {
+  return (
+    <div
+      className="flex items-center gap-0.5 p-[3px] rounded-[14px]"
+      style={{
+        background: 'rgba(0,0,0,0.32)',
+        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06), 0 1px 0 rgba(255,255,255,0.03)'
+      }}
+    >
+      {items.map(({ id, label, icon: Icon, title }) => {
+        const active = value === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            title={title || label}
+            className={`relative flex items-center gap-1.5 px-3.5 tab:px-3 py-[7px] rounded-[11px] whitespace-nowrap text-[12px] font-medium tracking-[0.01em] transition-all duration-200 cursor-pointer ${
+              active ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            style={active ? {
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 1px rgba(255,255,255,0.07), 0 4px 12px -4px rgba(0,0,0,0.8)'
+            } : undefined}
+          >
+            <Icon className="w-3.5 h-3.5 shrink-0" style={active ? { color: accent } : undefined} />
+            <span className="hidden sm:inline">{label}</span>
+            {active && (
+              <span
+                className="absolute left-1/2 -translate-x-1/2 -bottom-[3px] w-4 h-[2px] rounded-full"
+                style={{ background: accent, boxShadow: `0 0 8px ${accent}` }}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const iconButtonClass =
+  'h-9 shrink-0 whitespace-nowrap rounded-xl flex items-center justify-center gap-2 text-slate-300 hover:text-white transition-all duration-200 cursor-pointer bg-white/[0.04] hover:bg-white/[0.08] ring-1 ring-white/[0.08] hover:ring-white/[0.14] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]';
 
 export default function Navbar({
   activeTab,
@@ -24,196 +67,142 @@ export default function Navbar({
   onOpenSettings,
   currentTheme = 'cyan',
   onToggleTheme,
-  isCollapsed = false,
   onToggleCollapse
 }) {
   const isRose = currentTheme === 'rose';
+  const accent = isRose ? '#ff2d75' : '#38bdf8';
+  const accent2 = isRose ? '#9400D3' : '#34d399';
+  const isLiveSession = workoutStatus === 'running' || workoutStatus === 'paused';
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-3 sm:px-4 lg:px-8 py-3.5 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand & Logo */}
-        <div className="flex items-center gap-3">
-          <div className="relative group cursor-pointer" onClick={() => setActiveTab('live')}>
-            <div className={`w-10 h-10 rounded-2xl p-0.5 shadow-lg transition-all ${
-              isRose 
-                ? 'bg-gradient-to-br from-[#ff2d75] to-[#9400D3] shadow-[#ff2d75]/30 group-hover:shadow-[#ff2d75]/50' 
-                : 'bg-gradient-to-br from-sky-400 to-emerald-400 shadow-sky-500/20 group-hover:shadow-sky-500/40'
-            }`}>
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Bike className={`w-5 h-5 group-hover:scale-110 transition-transform ${isRose ? 'text-[#ff2d75]' : 'text-sky-400'}`} />
-              </div>
-            </div>
-          </div>
+    <header
+      className="sticky top-0 z-40 w-full px-3 sm:px-4 lg:px-8 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] tab:px-5 tab:pb-2.5 tab:pt-[calc(0.625rem+env(safe-area-inset-top))]"
+      style={{
+        background: isRose
+          ? 'linear-gradient(180deg, rgba(24,4,32,0.86) 0%, rgba(24,4,32,0.68) 100%)'
+          : 'linear-gradient(180deg, rgba(8,12,20,0.86) 0%, rgba(8,12,20,0.66) 100%)',
+        backdropFilter: 'blur(24px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.06), 0 12px 32px -16px rgba(0,0,0,0.9)'
+      }}
+    >
+      {/* Accent hairline along the bottom edge */}
+      <div
+        className="absolute bottom-0 inset-x-0 h-px pointer-events-none"
+        style={{ background: `linear-gradient(90deg, transparent 5%, ${accent}55 35%, ${accent2}55 65%, transparent 95%)` }}
+      />
 
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-lg tracking-wider text-white">MERACH</span>
-              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded border tracking-widest uppercase transition-colors ${
-                isRose 
-                  ? 'bg-[#ff2d75]/20 text-[#ff85b3] border-[#ff2d75]/40' 
-                  : 'bg-sky-500/20 text-sky-400 border-sky-500/40'
-              }`}>
-                BIKE
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 font-medium tracking-wide hidden sm:block">
-              Smart Cycling Telemetry
-            </p>
-          </div>
-        </div>
-
-        {/* Live Active Status Indicator (if running) */}
-        {workoutStatus === 'running' && (
-          <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono font-bold animate-pulse ${
-            isRose
-              ? 'bg-[#ff2d75]/15 border-[#ff2d75]/40 text-[#ff85b3]'
-              : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${isRose ? 'bg-[#ff2d75]' : 'bg-emerald-400'}`} />
-            <span>SESSÃO EM DIRETO: {elapsedTimeFormatted}</span>
-          </div>
-        )}
-
-        {/* Navigation Tabs (Desktop Top) */}
-        <div className={`hidden md:flex items-center gap-1.5 p-1.5 rounded-2xl border ${
-          isRose ? 'bg-[#290534]/70 border-[#ff2d75]/30' : 'bg-slate-900/80 border-slate-800'
-        }`}>
-          <button
-            onClick={() => setActiveTab('live')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'live'
-                ? isRose 
-                  ? 'bg-[#ff2d75]/25 text-[#ff85b3] border border-[#ff2d75]/50 shadow-sm'
-                  : 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        {/* Brand */}
+        <button type="button" onClick={() => setActiveTab('live')} className="group shrink-0 flex items-center gap-3 cursor-pointer">
+          <span
+            className="w-9 h-9 rounded-[11px] p-px transition-shadow"
+            style={{
+              background: `linear-gradient(140deg, ${accent} 0%, ${accent2} 100%)`,
+              boxShadow: `0 6px 18px -6px ${accent}`
+            }}
           >
-            <Activity className="w-3.5 h-3.5" />
-            Treino em Direto
-          </button>
-
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'analytics'
-                ? isRose
-                  ? 'bg-[#9400D3]/30 text-purple-200 border border-[#9400D3]/50 shadow-sm'
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <LineChart className="w-3.5 h-3.5" />
-            Estatísticas & Registos
-          </button>
-        </div>
-
-        {/* Cockpit Mode Switcher (Visible when in Live Workout tab on desktop, tablet, and mobile) */}
-        {activeTab === 'live' && (
-          <div className={`flex items-center gap-1 p-1 rounded-2xl border backdrop-blur-xl shadow-inner ${
-            isRose ? 'bg-[#290534]/90 border-[#ff2d75]/40' : 'bg-slate-900/90 border-slate-700/80'
-          }`}>
-            <button
-              type="button"
-              onClick={() => onSetDashboardMode ? onSetDashboardMode('gauges') : onToggleDashboardMode?.()}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                dashboardMode === 'gauges'
-                  ? isRose
-                    ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
-                    : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-black shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Modo Manómetros e Telemetria"
-            >
-              <Gauge className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">Manómetros</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onSetDashboardMode ? onSetDashboardMode('route') : onToggleDashboardMode?.()}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                dashboardMode === 'route'
-                  ? isRose
-                    ? 'bg-gradient-to-r from-[#9400D3] to-[#ff2d75] text-white shadow-md'
-                    : 'bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-black shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Modo Percurso Real 3D / GPS"
-            >
-              <Map className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">Percurso 3D</span>
-            </button>
-          </div>
-        )}
-
-        {/* Right Actions: Theme Switcher, Connection Badge & Settings */}
-        <div className="flex items-center gap-2.5">
-          {/* THEME SWITCHER BUTTON (Cyan vs Rosa & DarkViolet) */}
-          <button
-            onClick={onToggleTheme}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-sm ${
-              isRose
-                ? 'bg-[#ff2d75]/20 border-[#ff2d75]/50 text-[#ff85b3] hover:bg-[#ff2d75]/30 shadow-[#ff2d75]/20'
-                : 'bg-sky-500/15 border-sky-500/40 text-sky-300 hover:bg-sky-500/25 shadow-sky-500/10'
-            }`}
-            title="Alternar Tema: Cyber Cyan vs Rosa & DarkViolet"
-          >
-            <Palette className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline font-sans">
-              {isRose ? 'Rosa & DarkViolet' : 'Cyber Cyan'}
+            <span className="w-full h-full rounded-[10px] flex items-center justify-center bg-[#070b12] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <Bike className="w-[18px] h-[18px] transition-transform group-hover:scale-110" style={{ color: accent }} strokeWidth={2.2} />
             </span>
-            <div className="flex items-center -space-x-1">
-              <span className={`w-2.5 h-2.5 rounded-full border border-slate-900 ${isRose ? 'bg-[#ff2d75] scale-110 ring-1 ring-[#ff2d75]' : 'bg-sky-400'}`} />
-              <span className={`w-2.5 h-2.5 rounded-full border border-slate-900 ${isRose ? 'bg-[#9400D3] scale-110 ring-1 ring-[#9400D3]' : 'bg-emerald-400 scale-110 ring-1 ring-emerald-400'}`} />
-            </div>
+          </span>
+          <span className="flex flex-col items-start leading-none whitespace-nowrap">
+            <span className="text-[14px] tracking-[0.3em] text-white">
+              <span className="font-bold">MERACH</span>
+              <span className="font-light ml-1.5" style={{ color: accent }}>BIKE</span>
+            </span>
+            <span className="hidden sm:block tab:hidden mt-1.5 text-[9px] font-medium uppercase tracking-[0.34em] text-slate-500">
+              Smart Cycling Telemetry
+            </span>
+          </span>
+        </button>
+
+        {/* Live session badge (desktop) */}
+        {isLiveSession && (
+          <div
+            className="hidden 2xl:flex shrink-0 whitespace-nowrap items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold tabular-nums tracking-[0.12em] text-slate-200 bg-white/[0.04] ring-1 ring-white/[0.08]"
+          >
+            <span className="relative flex w-2 h-2">
+              {workoutStatus === 'running' && <span className="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-70" />}
+              <span className={`relative w-2 h-2 rounded-full ${workoutStatus === 'running' ? 'bg-rose-500' : 'bg-amber-400'}`} />
+            </span>
+            <span className="uppercase text-slate-400">{workoutStatus === 'running' ? 'Ao vivo' : 'Pausa'}</span>
+            <span className="text-white">{elapsedTimeFormatted}</span>
+          </div>
+        )}
+
+        {/* Main tabs (desktop / tablet) */}
+        <div className="hidden md:block">
+          <Segmented
+            accent={accent}
+            value={activeTab}
+            onChange={setActiveTab}
+            items={[
+              { id: 'live', label: 'Treino em Direto', icon: Activity },
+              { id: 'analytics', label: 'Estatísticas', icon: LineChart, title: 'Estatísticas & Registos' }
+            ]}
+          />
+        </div>
+
+        {/* Cockpit mode switch */}
+        {activeTab === 'live' && (
+          <Segmented
+            accent={accent}
+            value={dashboardMode}
+            onChange={(id) => (onSetDashboardMode ? onSetDashboardMode(id) : onToggleDashboardMode?.())}
+            items={[
+              { id: 'gauges', label: 'Manómetros', icon: Gauge, title: 'Modo Manómetros e Telemetria' },
+              { id: 'route', label: 'Percurso 3D', icon: Map, title: 'Modo Percurso Real 3D / GPS' }
+            ]}
+          />
+        )}
+
+        {/* Right actions */}
+        <div className="flex items-center gap-2">
+          {/* Theme */}
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className={`${iconButtonClass} px-3`}
+            title={`Tema: ${isRose ? 'Rosa & DarkViolet' : 'Cyber Cyan'} (tocar para alternar)`}
+          >
+            <span className="flex items-center -space-x-1">
+              <span className="w-3 h-3 rounded-full ring-2 ring-[#0b1018]" style={{ background: accent }} />
+              <span className="w-3 h-3 rounded-full ring-2 ring-[#0b1018]" style={{ background: accent2 }} />
+            </span>
+            <span className="hidden sm:inline tab:hidden text-[12px] font-medium">{isRose ? 'Rosa' : 'Cyan'}</span>
           </button>
 
-          {/* Connection Mode Pill */}
+          {/* Data source */}
           <button
+            type="button"
             onClick={onOpenSettings}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              mode === 'simulation'
-                ? 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:text-white'
-                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-            }`}
-            title="Alternar Modo / Configurações"
+            className={`${iconButtonClass} px-3`}
+            title={mode === 'simulation' ? 'Fonte: Simulador' : 'Fonte: Home Assistant'}
           >
+            <span className="relative flex w-1.5 h-1.5">
+              <span className={`relative w-1.5 h-1.5 rounded-full ${mode === 'simulation' ? 'bg-slate-400' : 'bg-emerald-400 shadow-[0_0_6px_#34d399]'}`} />
+            </span>
             {mode === 'simulation' ? (
-              <>
-                <Cpu className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Simulador</span>
-              </>
+              <Cpu className="w-3.5 h-3.5" />
             ) : (
-              <>
-                <Radio className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Home Assistant</span>
-              </>
+              <Radio className="w-3.5 h-3.5 text-emerald-300" />
             )}
+            <span className="hidden sm:inline tab:hidden text-[12px] font-medium">
+              {mode === 'simulation' ? 'Simulador' : 'Home Assistant'}
+            </span>
           </button>
 
-          {/* Settings button */}
-          <button
-            onClick={onOpenSettings}
-            className="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 flex items-center justify-center text-slate-300 hover:text-white border border-slate-700/60 transition-all cursor-pointer"
-            title="Configurações de Sensores e Perfil"
-          >
+          {/* Settings */}
+          <button type="button" onClick={onOpenSettings} className={`${iconButtonClass} w-9`} title="Configurações de Sensores e Perfil">
             <Settings className="w-4 h-4" />
           </button>
 
-          {/* Cockpit Mode Collapse Button (when running or paused) */}
-          {(workoutStatus === 'running' || workoutStatus === 'paused') && (
-            <button
-              onClick={onToggleCollapse}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-sm ${
-                isRose
-                  ? 'bg-[#380743]/85 hover:bg-[#4d0a5e] border-[#ff2d75]/50 text-[#ff85b3] hover:text-white shadow-[0_0_12px_rgba(255,45,117,0.25)]'
-                  : 'bg-slate-800/80 hover:bg-slate-700/80 border-sky-500/40 text-sky-300 hover:text-white shadow-[0_0_12px_rgba(56,189,248,0.2)]'
-              }`}
-              title="Ocultar barra superior para modo cockpit"
-            >
-              <ChevronUp className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Ocultar Barra</span>
+          {/* Collapse for cockpit immersion */}
+          {isLiveSession && (
+            <button type="button" onClick={onToggleCollapse} className={`${iconButtonClass} px-2.5`} title="Ocultar barra superior">
+              <ChevronUp className="w-4 h-4" />
+              <span className="hidden sm:inline tab:hidden text-[12px] font-medium">Ocultar</span>
             </button>
           )}
         </div>
