@@ -1,4 +1,5 @@
 import React from 'react';
+import GlassPanel from './GlassPanel';
 import { Route, Flame, Gauge, RotateCw } from 'lucide-react';
 
 function IconTile({ icon: Icon, color }) {
@@ -56,29 +57,22 @@ export default function SessionStatsPanel({
   const labelClass = `text-[11px] font-semibold uppercase tracking-[0.24em] ${isRose ? 'text-pink-200/65' : 'text-slate-400'}`;
 
   return (
-    <div
-      className="w-full rounded-[24px] p-px"
-      style={{
-        background: `linear-gradient(160deg, ${distanceColor}66 0%, rgba(255,255,255,0.07) 32%, rgba(255,255,255,0.04) 68%, ${caloriesColor}66 100%)`,
-        boxShadow: '0 2px 3px rgba(0,0,0,0.5), 0 16px 30px -12px rgba(0,0,0,0.8), 0 36px 60px -30px rgba(0,0,0,0.95)'
-      }}
+    <GlassPanel
+      isRose={isRose}
+      accent={distanceColor}
+      accent2={caloriesColor}
+      radius={22}
+      elevation="low"
+      className="w-full"
+      innerClassName="px-5 py-4 overflow-hidden rounded-[22px]"
     >
-      <div
-        className="relative rounded-[23px] px-5 py-4 overflow-hidden"
-        style={{
-          background: isRose
-            ? 'linear-gradient(180deg, #33103e 0%, #1d0726 45%, #11031a 100%)'
-            : 'linear-gradient(180deg, #1a2436 0%, #111a28 45%, #090e17 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 0 rgba(0,0,0,0.5)'
-        }}
-      >
         {/* Soft corner light */}
         <div className="absolute -top-16 -left-10 w-44 h-44 rounded-full blur-3xl opacity-[0.12] pointer-events-none" style={{ background: distanceColor }} />
         <div className="absolute -bottom-16 -right-10 w-44 h-44 rounded-full blur-3xl opacity-[0.10] pointer-events-none" style={{ background: caloriesColor }} />
 
         {/* Header */}
         <div className="relative flex items-center justify-between mb-4">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-500">Sessão</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.32em] text-slate-300/80">Sessão</span>
           <span className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${live.text}`}>
             <span className="relative flex w-1.5 h-1.5">
               {live.ping && <span className={`absolute inset-0 rounded-full ${live.dot} animate-ping opacity-75`} />}
@@ -123,7 +117,6 @@ export default function SessionStatsPanel({
           <MiniStat icon={Gauge} label="Vel. máxima" value={Number(sessionStats?.maxSpeed || 0).toFixed(1)} unit="km/h" color={speedAccent} />
           <MiniStat icon={RotateCw} label="Cad. máxima" value={Number(sessionStats?.maxCadence || 0).toFixed(1)} unit="rpm" color={cadenceAccent} />
         </div>
-      </div>
-    </div>
+    </GlassPanel>
   );
 }

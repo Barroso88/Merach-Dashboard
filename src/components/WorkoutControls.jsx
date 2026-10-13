@@ -11,7 +11,39 @@ import {
 } from 'lucide-react';
 import LaunchCountdownOverlay from './LaunchCountdownOverlay';
 import GoalTrack from './GoalTrack';
-import { premiumSurfaceStyle, accentHairlineStyle } from '../constants/surfaces';
+import { accentHairlineStyle } from '../constants/surfaces';
+import GlassPanel from './GlassPanel';
+
+// Glossy "liquid glass" pill: saturated colour body, crisp top rim, curved specular
+// highlight on the upper half and a bounce-light reflection along the bottom edge.
+function LiquidButton({ onClick, from, to, glow, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 tab:py-3 rounded-full overflow-hidden font-semibold text-[13px] uppercase tracking-[0.18em] text-white cursor-pointer transition-all duration-150 hover:brightness-110 active:scale-[0.97] active:brightness-95"
+      style={{
+        background: `linear-gradient(180deg, ${from} 0%, ${to} 100%)`,
+        boxShadow: [
+          'inset 0 1.5px 0 rgba(255,255,255,0.7)',
+          'inset 0 -2px 3px rgba(255,255,255,0.35)',
+          'inset 0 10px 16px -8px rgba(255,255,255,0.45)',
+          'inset 0 -10px 18px -10px rgba(0,0,0,0.35)',
+          'inset 0 0 0 1px rgba(255,255,255,0.18)',
+          `0 2px 4px ${glow}55`,
+          `0 14px 30px -10px ${glow}`
+        ].join(', '),
+        textShadow: '0 1px 2px rgba(0,0,0,0.35)'
+      }}
+    >
+      {/* Curved specular highlight */}
+      <span className="pointer-events-none absolute top-[2px] left-[6%] right-[6%] h-[48%] rounded-full bg-gradient-to-b from-white/55 via-white/15 to-transparent" />
+      {/* Bounce light along the bottom */}
+      <span className="pointer-events-none absolute bottom-[2px] left-[18%] right-[18%] h-[2px] rounded-full bg-gradient-to-r from-transparent via-white/70 to-transparent blur-[0.5px]" />
+      <span className="relative flex items-center gap-2.5">{children}</span>
+    </button>
+  );
+}
 
 // Each duration has its own colour (cool → hot as the ride gets longer)
 const COUNTDOWN_PRESETS = [
@@ -76,8 +108,6 @@ export default function WorkoutControls({
   };
 
   const accentColor = themeConfig?.speedAccent || '#38bdf8';
-  const primaryGradient = themeConfig?.primaryButtonGrad || 'from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400';
-  const primaryShadow = themeConfig?.primaryButtonShadow || 'shadow-emerald-500/25 hover:shadow-emerald-500/40';
 
   const formatTime = (totalSecs) => {
     const hours = Math.floor(totalSecs / 3600);
@@ -150,16 +180,19 @@ export default function WorkoutControls({
         riderName={riderName}
       />
 
-      <div
-        className="rounded-[28px] px-4 py-4 md:px-6 md:py-5 tab:py-3.5 flex flex-col gap-3.5 md:gap-4 tab:gap-2.5 relative overflow-hidden transition-colors duration-500"
-        style={premiumSurfaceStyle(isRose, accentColor)}
+      <GlassPanel
+        isRose={isRose}
+        accent={accentColor}
+        accent2={isRose ? '#d946ef' : '#34d399'}
+        radius={28}
+        innerClassName="px-5 py-4 md:px-7 md:py-5 tab:py-3.5 flex flex-col gap-3.5 md:gap-4 tab:gap-2.5"
       >
         {/* Top accent hairline */}
         <div className="absolute top-0 inset-x-10 h-px pointer-events-none" style={accentHairlineStyle(accentColor)} />
 
         {/* Rider image picker (corner) */}
         {status !== 'idle' && (
-          <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
+          <div className="absolute top-3 right-8 z-10 flex items-center gap-1">
             <input
               type="file"
               ref={fileInputRef}
@@ -320,47 +353,41 @@ export default function WorkoutControls({
           {/* Action buttons, centred under the timer */}
           <div className="flex items-center justify-center gap-3 w-full max-w-md mt-1">
             {status === 'idle' && (
-              <button
+              <LiquidButton
                 onClick={handleInitiateStart}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3.5 tab:py-3 rounded-2xl bg-gradient-to-r ${primaryGradient} ${
-                  isRose ? 'text-white' : 'text-slate-950'
-                } font-semibold text-[13px] uppercase tracking-[0.18em] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] shadow-lg ${primaryShadow} active:scale-[0.97] transition-all cursor-pointer`}
+                from={isRose ? '#ff5c97' : '#34d399'}
+                to={isRose ? '#a21caf' : '#047857'}
+                glow={isRose ? '#ff2d75' : '#10b981'}
               >
                 <Play className="w-4 h-4 fill-current" />
                 {isCountdownMode ? `Iniciar · ${targetSeconds / 60} min` : 'Iniciar treino'}
-              </button>
+              </LiquidButton>
             )}
 
             {status === 'running' && (
-              <button
-                onClick={onPause}
-                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 tab:py-3 rounded-2xl font-semibold text-[13px] uppercase tracking-[0.18em] text-white active:scale-[0.97] transition-all cursor-pointer bg-gradient-to-b from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 -translate-y-[4px] active:translate-y-0 active:scale-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_0_1px_rgba(239,68,68,0.9),0_4px_0_#991b1b,0_5px_0_rgba(0,0,0,0.35),0_16px_28px_-10px_rgba(239,68,68,0.8)] active:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_0_1px_rgba(239,68,68,0.9),0_0_0_#991b1b,0_6px_14px_-6px_rgba(239,68,68,0.7)]"
-              >
+              <LiquidButton onClick={onPause} from="#f87171" to="#b91c1c" glow="#ef4444">
                 <Pause className="w-4 h-4 fill-white text-white" />
                 Pausar
-              </button>
+              </LiquidButton>
             )}
 
             {status === 'paused' && (
-              <button
+              <LiquidButton
                 onClick={onResume}
-                className={`flex-1 flex items-center justify-center gap-2 px-5 py-3.5 tab:py-3 rounded-2xl bg-gradient-to-r ${isRose ? primaryGradient : 'from-sky-400 to-cyan-500 hover:from-sky-300 hover:to-cyan-400'} ${
-                  isRose ? 'text-white' : 'text-slate-950'
-                } font-semibold text-[13px] uppercase tracking-[0.18em] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] shadow-lg ${primaryShadow} active:scale-[0.97] transition-all cursor-pointer`}
+                from={isRose ? '#ff5c97' : '#38bdf8'}
+                to={isRose ? '#a21caf' : '#0369a1'}
+                glow={isRose ? '#ff2d75' : '#0ea5e9'}
               >
                 <Play className="w-4 h-4 fill-current" />
                 Retomar
-              </button>
+              </LiquidButton>
             )}
 
             {(status === 'running' || status === 'paused') && (
-              <button
-                onClick={onStop}
-                className="flex-1 flex items-center justify-center gap-2.5 px-5 py-3.5 tab:py-3 rounded-2xl font-semibold text-[13px] uppercase tracking-[0.18em] text-white active:scale-[0.97] transition-all cursor-pointer bg-gradient-to-b from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 -translate-y-[4px] active:translate-y-0 active:scale-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_0_1px_rgba(34,197,94,0.9),0_4px_0_#15803d,0_5px_0_rgba(0,0,0,0.35),0_16px_28px_-10px_rgba(34,197,94,0.8)] active:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_0_1px_rgba(34,197,94,0.9),0_0_0_#15803d,0_6px_14px_-6px_rgba(34,197,94,0.7)]"
-              >
+              <LiquidButton onClick={onStop} from="#4ade80" to="#15803d" glow="#22c55e">
                 <Square className="w-3.5 h-3.5 fill-white text-white" />
                 Finalizar
-              </button>
+              </LiquidButton>
             )}
 
             {status === 'idle' && elapsedSeconds > 0 && (
@@ -398,7 +425,7 @@ export default function WorkoutControls({
           </div>
         )}
 
-      </div>
+      </GlassPanel>
     </>
   );
 }

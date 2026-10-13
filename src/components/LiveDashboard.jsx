@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import SportNeedleGauge from './SportNeedleGauge';
 import SessionStatsPanel from './SessionStatsPanel';
-import { premiumSurfaceStyle, accentHairlineStyle } from '../constants/surfaces';
+import { accentHairlineStyle } from '../constants/surfaces';
+import GlassPanel from './GlassPanel';
 import WorkoutControls from './WorkoutControls';
 import RouteMap from './RouteMap';
 import RouteErrorBoundary from './RouteErrorBoundary';
@@ -162,11 +163,14 @@ export default function LiveDashboard({
       </div>
 
       {/* Active Route Quick-Access Banner (hidden mid-workout on tablet landscape to keep everything on one screen) */}
-      <div
-        className={`w-full max-w-3xl px-4 py-2.5 rounded-[20px] flex flex-wrap items-center justify-between gap-3 transition-all ${
-          workoutStatus !== 'idle' ? 'tab:hidden' : ''
-        }`}
-        style={premiumSurfaceStyle(isRose, speedAccent)}
+      <GlassPanel
+        isRose={isRose}
+        accent={speedAccent}
+        accent2={cadenceAccent}
+        radius={20}
+        elevation="low"
+        className={`w-full max-w-3xl ${workoutStatus !== 'idle' ? 'tab:hidden' : ''}`}
+        innerClassName="px-5 py-2.5 flex flex-wrap items-center justify-between gap-3"
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
@@ -198,12 +202,16 @@ export default function LiveDashboard({
           <span>Ver / Alterar Percurso</span>
           <ChevronRight className="w-3 h-3" />
         </button>
-      </div>
+      </GlassPanel>
 
       {/* INSTRUMENT CLUSTER: SPEED | DISTANCE & CALORIES | CADENCE */}
-      <div
-        className="w-full rounded-[28px] px-4 py-5 md:px-6 md:py-6 lg:px-8 tab:px-6 tab:py-4 relative overflow-hidden flex flex-col items-center transition-colors duration-700"
-        style={premiumSurfaceStyle(isRose, speedAccent)}
+      <GlassPanel
+        isRose={isRose}
+        accent={speedAccent}
+        accent2={cadenceAccent}
+        radius={32}
+        className="w-full"
+        innerClassName="px-5 py-5 md:px-7 md:py-6 lg:px-9 tab:px-7 tab:py-4 flex flex-col items-center"
       >
         {/* Top accent hairline */}
         <div className="absolute top-0 inset-x-10 h-px pointer-events-none" style={accentHairlineStyle(speedAccent, cadenceAccent)} />
@@ -263,7 +271,7 @@ export default function LiveDashboard({
           </div>
 
         </div>
-      </div>
+      </GlassPanel>
     </div>
   );
 }

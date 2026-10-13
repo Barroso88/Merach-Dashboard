@@ -10,8 +10,8 @@ export const THEMES = {
     // App Background
     bgBody: '#080c14',
     bgAppClass: 'bg-[#080c14]',
-    ambientGlow1: 'bg-sky-500/15',
-    ambientGlow2: 'bg-emerald-500/15',
+    ambientGlow1: 'bg-sky-500/25',
+    ambientGlow2: 'bg-emerald-500/20',
     // Cluster & Cards
     clusterBg: 'linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(8, 12, 20, 0.96) 50%, rgba(5, 8, 14, 0.99) 100%)',
     clusterBorder: 'rgba(56, 189, 248, 0.25)',
