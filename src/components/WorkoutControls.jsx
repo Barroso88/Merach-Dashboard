@@ -36,7 +36,8 @@ export default function WorkoutControls({
   onStop,
   onReset,
   themeConfig,
-  cadence = 0
+  cadence = 0,
+  onBeforeStart
 }) {
   const [showLaunchOverlay, setShowLaunchOverlay] = useState(false);
   const [displayMode, setDisplayMode] = useState('countdown'); // 'countdown' | 'elapsed'
@@ -98,8 +99,10 @@ export default function WorkoutControls({
     : ((elapsedSeconds % LAP_SECONDS) / LAP_SECONDS) * 100;
   const lapNumber = Math.floor(elapsedSeconds / LAP_SECONDS) + 1;
 
+  // Ask who is riding (if the parent wants to), then run the 3-2-1 launch
   const handleInitiateStart = () => {
-    setShowLaunchOverlay(true);
+    if (onBeforeStart) onBeforeStart(() => setShowLaunchOverlay(true));
+    else setShowLaunchOverlay(true);
   };
 
   const handleLaunchComplete = () => {
