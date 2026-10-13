@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* iPad 11" (and similar tablets) in landscape: 1024–1279px wide. Desktop (>=1280px) is unaffected. */
+@custom-variant tab (@media (min-width: 1024px) and (max-width: 1279.98px) and (orientation: landscape));
+
 @layer base {
   :root {
     --bg-dark: #090d16;
@@ -75,4 +78,32 @@
 
 .leaflet-container {
   background-color: #0b0f19 !important;
+}
+
+/* Goal track (WorkoutControls) */
+@keyframes goal-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+@keyframes goal-streak {
+  0% { opacity: 0; transform: translateX(6px); }
+  40% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateX(-10px); }
+}
+
+/* Motivational popup (every 5 minutes) */
+@keyframes motivation-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.86); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes motivation-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes motivation-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }
