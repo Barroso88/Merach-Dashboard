@@ -19,6 +19,7 @@ export default function LiveDashboard({
   themeConfig,
   settings,
   onStart,
+  onBeforeStart,
   onPause,
   onResume,
   onStop,
@@ -88,7 +89,7 @@ export default function LiveDashboard({
             targetSeconds={targetSeconds}
             themeConfig={themeConfig}
             workoutStatus={workoutStatus}
-            onStart={onStart}
+            onStart={() => (onBeforeStart ? onBeforeStart(onStart) : onStart())}
             onPause={onPause}
             onResume={onResume}
             onStop={onStop}
@@ -112,6 +113,7 @@ export default function LiveDashboard({
             targetSeconds={targetSeconds}
             onSelectTargetSeconds={onSelectTargetSeconds}
             onStart={onStart}
+            onBeforeStart={onBeforeStart}
             onPause={onPause}
             onResume={onResume}
             onStop={onStop}

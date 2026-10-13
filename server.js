@@ -22,6 +22,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const WORKOUTS_FILE = path.join(DATA_DIR, 'workouts.json');
 const ROUTES_FILE = path.join(DATA_DIR, 'routes.json');
+const PROFILES_FILE = path.join(DATA_DIR, 'profiles.json');
 
 // ==========================================
 // POSTGRESQL DATABASE INTEGRATION (UNRAID)
@@ -681,6 +682,57 @@ const server = http.createServer(async (req, res) => {
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: err.message }));
+      }
+    }
+  }
+
+  // 7. Rider Profiles API (stored as its own row in merach_settings / profiles.json)
+  if (parsedUrl.pathname === '/api/profiles') {
+    if (req.method === 'GET') {
+      let data = null;
+      if (isPostgresReady && dbPool) {
+        try {
+          const dbRes = await dbPool.query("SELECT data FROM merach_settings WHERE id = 'profiles'");
+          if (dbRes.rows.length > 0) data = dbRes.rows[0].data;
+        } catch (err) {
+          console.warn('Erro ao ler perfis no PostgreSQL:', err.message);
+        }
+      }
+      if (!data) data = readJsonFile(PROFILES_FILE, null);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(data || { profiles: [], legacyProfileId: null }));
+    }
+
+    if (req.method === 'POST') {
+      try {
+        const body = await readBody(req);
+        if (!Array.isArray(body?.profiles)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ error: 'profiles must be an array' }));
+        }
+        const data = {
+          profiles: body.profiles
+            .filter(p => p && typeof p.id === 'string' && typeof p.name === 'string')
+            .map(p => ({ id: p.id, name: p.name.slice(0, 40), color: p.color, theme: p.theme === 'rose' ? 'rose' : 'cyan', createdAt: p.createdAt })),
+          legacyProfileId: typeof body.legacyProfileId === 'string' ? body.legacyProfileId : null
+        };
+        writeJsonFile(PROFILES_FILE, data);
+        if (isPostgresReady && dbPool) {
+          try {
+            await dbPool.query(`
+              INSERT INTO merach_settings (id, data, updated_at)
+              VALUES ('profiles', $1, NOW())
+              ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+            `, [JSON.stringify(data)]);
+          } catch (err) {
+            console.error('Erro ao guardar perfis no PostgreSQL:', err.message);
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true, ...data }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ error: err.message }));

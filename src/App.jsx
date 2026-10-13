@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import LiveDashboard from './components/LiveDashboard';
@@ -8,6 +8,15 @@ import WorkoutDetailModal from './components/WorkoutDetailModal';
 import ConnectionSettingsModal from './components/ConnectionSettingsModal';
 import ModalErrorBoundary from './components/ModalErrorBoundary';
 import MotivationalPopup from './components/MotivationalPopup';
+import ProfilesModal, { Avatar } from './components/ProfilesModal';
+import {
+  getStoredProfiles,
+  saveProfiles,
+  fetchServerProfiles,
+  getActiveProfileId,
+  setActiveProfileId,
+  workoutOwnerId
+} from './services/profileService';
 
 import { MerachSimulator } from './services/telemetrySimulator';
 import { HomeAssistantService } from './services/homeAssistantService';
@@ -28,18 +37,63 @@ import { THEMES } from './constants/themes';
 import { ChevronDown } from 'lucide-react';
 
 export default function App() {
-  // Theme: 'cyan' or 'rose'
+  // Rider profiles (shared via server) + the profile active on this device
+  const [profilesData, setProfilesData] = useState(() => getStoredProfiles());
+  const [activeProfileId, setActiveProfileIdState] = useState(() => getActiveProfileId());
+  const activeProfile = useMemo(
+    () => profilesData.profiles.find(p => p.id === activeProfileId) || profilesData.profiles[0],
+    [profilesData, activeProfileId]
+  );
+  const [profilesModal, setProfilesModal] = useState(null); // null | 'pick' | 'manage'
+  const pendingStartRef = useRef(null);
+
+  const updateProfiles = (profiles) => {
+    const next = saveProfiles({ ...profilesData, profiles });
+    setProfilesData(next);
+  };
+
+  const selectProfile = (id) => {
+    setActiveProfileIdState(id);
+    setActiveProfileId(id);
+  };
+
+  // Theme: 'cyan' or 'rose' (each profile has its own)
   const [currentTheme, setCurrentTheme] = useState(() => {
-    return localStorage.getItem('merach_theme') || 'cyan';
+    return activeProfile?.theme || localStorage.getItem('merach_theme') || 'cyan';
   });
 
+  useEffect(() => {
+    if (activeProfile?.theme) {
+      setCurrentTheme(activeProfile.theme);
+      localStorage.setItem('merach_theme', activeProfile.theme);
+    }
+  }, [activeProfile?.id, activeProfile?.theme]);
+
   const handleToggleTheme = () => {
-    setCurrentTheme(prev => {
-      const next = prev === 'cyan' ? 'rose' : 'cyan';
-      localStorage.setItem('merach_theme', next);
-      return next;
-    });
+    const next = currentTheme === 'cyan' ? 'rose' : 'cyan';
+    setCurrentTheme(next);
+    localStorage.setItem('merach_theme', next);
+    if (activeProfile) {
+      updateProfiles(profilesData.profiles.map(p => (p.id === activeProfile.id ? { ...p, theme: next } : p)));
+    }
   };
+
+  // Ask who is riding before every workout start
+  const requestStart = (proceed) => {
+    pendingStartRef.current = proceed;
+    setProfilesModal('pick');
+  };
+
+  const handleProfilePicked = (id) => {
+    selectProfile(id);
+    setProfilesModal(null);
+    const proceed = pendingStartRef.current;
+    pendingStartRef.current = null;
+    proceed?.();
+  };
+
+  // Analytics: which rider's history to show ('active' follows the active profile)
+  const [analyticsProfile, setAnalyticsProfile] = useState('active');
 
   // Navigation: 'live' or 'analytics'
   const [activeTab, setActiveTab] = useState('live');
@@ -428,6 +482,8 @@ export default function App() {
     const summary = {
       id: `wo-${Date.now()}`,
       title: 'Treino Merach Bike',
+      profileId: activeProfile?.id,
+      profileName: activeProfile?.name,
       date: new Date().toISOString(),
       durationSeconds: finalDuration,
       distanceKm: Number((sessionStats.distanceKm || 0).toFixed(1)),
@@ -486,7 +542,11 @@ export default function App() {
 
   // Save or edit a workout (manual insertion or editing)
   const handleSaveOrUpdateWorkout = (workout) => {
-    const updated = saveWorkoutToStorage(workout);
+    // Manually added workouts belong to the active rider
+    const owned = workout.profileId || workouts.some(w => w.id === workout.id)
+      ? workout
+      : { ...workout, profileId: activeProfile?.id, profileName: activeProfile?.name };
+    const updated = saveWorkoutToStorage(owned);
     if (updated) {
       setWorkouts(updated);
     }
@@ -557,7 +617,25 @@ export default function App() {
     });
 
     fetchServerCustomRoutes();
+
+    fetchServerProfiles().then((data) => {
+      if (data) setProfilesData(data);
+    });
   }, []);
+
+  const workoutCounts = useMemo(() => {
+    const counts = {};
+    for (const w of workouts) {
+      const owner = workoutOwnerId(w, profilesData.legacyProfileId);
+      if (owner) counts[owner] = (counts[owner] || 0) + 1;
+    }
+    return counts;
+  }, [workouts, profilesData.legacyProfileId]);
+
+  const analyticsProfileId = analyticsProfile === 'active' ? activeProfile?.id : analyticsProfile;
+  const analyticsWorkouts = analyticsProfile === 'all'
+    ? workouts
+    : workouts.filter(w => workoutOwnerId(w, profilesData.legacyProfileId) === analyticsProfileId);
 
   const activeTheme = THEMES[currentTheme] || THEMES.cyan;
   const isRose = currentTheme === 'rose';
@@ -614,6 +692,8 @@ export default function App() {
           onToggleTheme={handleToggleTheme}
           isCollapsed={isNavbarCollapsed}
           onToggleCollapse={() => setIsNavbarCollapsed(prev => !prev)}
+          activeProfile={activeProfile}
+          onOpenProfiles={() => setProfilesModal('manage')}
         />
       </div>
 
@@ -633,6 +713,7 @@ export default function App() {
             themeConfig={activeTheme}
             settings={settings}
             onStart={handleStartWorkout}
+            onBeforeStart={requestStart}
             onPause={handlePauseWorkout}
             onResume={handleResumeWorkout}
             onStop={handleStopWorkout}
@@ -643,13 +724,41 @@ export default function App() {
             setDashboardMode={setDashboardMode}
           />
         ) : (
+          <>
+          {/* Rider filter */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {[...profilesData.profiles.map(p => ({ id: p.id, profile: p })), { id: 'all', profile: null }].map(({ id, profile }) => {
+              const selected = analyticsProfileId === id || (analyticsProfile === 'all' && id === 'all');
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setAnalyticsProfile(id === activeProfile?.id ? 'active' : id)}
+                  className={`flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all ${
+                    selected ? 'text-white bg-white/10 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]' : 'text-slate-400 bg-white/[0.03] ring-1 ring-white/[0.06] hover:text-white'
+                  }`}
+                >
+                  {profile ? (
+                    <Avatar profile={profile} size={26} />
+                  ) : (
+                    <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center bg-white/10 text-[11px]">∑</span>
+                  )}
+                  {profile ? profile.name : 'Todos'}
+                  <span className="text-[11px] font-medium text-slate-500 tabular-nums">
+                    {profile ? (workoutCounts[id] || 0) : workouts.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
           <AnalyticsView
-            workouts={workouts}
+            workouts={analyticsWorkouts}
             themeConfig={activeTheme}
             onDeleteWorkout={handleDeleteWorkout}
             onSelectWorkout={(w) => setSelectedWorkoutDetail(w)}
             onSaveWorkout={handleSaveOrUpdateWorkout}
           />
+          </>
         )}
       </main>
 
@@ -671,6 +780,19 @@ export default function App() {
         targetSeconds={targetSeconds}
         sessionStats={sessionStats}
         themeConfig={activeTheme}
+        riderName={activeProfile?.name}
+      />
+
+      {/* Rider profiles: "who is riding?" before each start, or manage from the navbar */}
+      <ProfilesModal
+        isOpen={Boolean(profilesModal)}
+        mode={profilesModal || 'pick'}
+        profiles={profilesData.profiles}
+        activeId={activeProfile?.id}
+        workoutCounts={workoutCounts}
+        onPick={(id) => (profilesModal === 'pick' ? handleProfilePicked(id) : (selectProfile(id), setProfilesModal(null)))}
+        onChangeProfiles={updateProfiles}
+        onClose={() => { pendingStartRef.current = null; setProfilesModal(null); }}
       />
 
       {/* Modal: Workout Completion Celebration */}

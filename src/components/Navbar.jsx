@@ -1,4 +1,5 @@
 import React from 'react';
+import { Avatar } from './ProfilesModal';
 import {
   Bike,
   Activity,
@@ -67,7 +68,9 @@ export default function Navbar({
   onOpenSettings,
   currentTheme = 'cyan',
   onToggleTheme,
-  onToggleCollapse
+  onToggleCollapse,
+  activeProfile,
+  onOpenProfiles
 }) {
   const isRose = currentTheme === 'rose';
   const accent = isRose ? '#ff2d75' : '#38bdf8';
@@ -159,6 +162,19 @@ export default function Navbar({
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          {/* Active rider */}
+          {activeProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfiles}
+              className={`${iconButtonClass} pl-1 pr-3`}
+              title="Trocar ou gerir perfis"
+            >
+              <Avatar profile={activeProfile} size={28} />
+              <span className="max-w-[110px] truncate text-[12px] font-semibold text-white">{activeProfile.name}</span>
+            </button>
+          )}
+
           {/* Theme */}
           <button
             type="button"

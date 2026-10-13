@@ -57,7 +57,8 @@ export default function MotivationalPopup({
   elapsedSeconds = 0,
   targetSeconds = 0,
   sessionStats,
-  themeConfig
+  themeConfig,
+  riderName
 }) {
   const [popup, setPopup] = useState(null);
   const lastMilestoneRef = useRef(0);
@@ -79,7 +80,11 @@ export default function MotivationalPopup({
     // The goal-reached celebration already covers the end of a timed workout
     if (targetSeconds > 0 && elapsedSeconds >= targetSeconds) return;
 
-    const message = buildMessage({ milestone, elapsedSeconds, targetSeconds, sessionStats });
+    const message = { ...buildMessage({ milestone, elapsedSeconds, targetSeconds, sessionStats }) };
+    // Personalise the headline: "Estás a voar!" → "Estás a voar, Nayara!"
+    if (riderName && message.title.endsWith('!')) {
+      message.title = `${message.title.slice(0, -1)}, ${riderName}!`;
+    }
     setPopup({
       id: milestone,
       minutes: Math.round((milestone * INTERVAL_SECONDS) / 60),
@@ -92,7 +97,7 @@ export default function MotivationalPopup({
 
     clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setPopup(null), VISIBLE_MS);
-  }, [elapsedSeconds, workoutStatus, targetSeconds, sessionStats]);
+  }, [elapsedSeconds, workoutStatus, targetSeconds, sessionStats, riderName]);
 
   useEffect(() => () => clearTimeout(hideTimerRef.current), []);
 
