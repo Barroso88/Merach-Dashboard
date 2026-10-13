@@ -235,11 +235,7 @@ export default function WorkoutControls({
             </div>
 
             <div
-              className="grid grid-cols-4 md:grid-cols-8 gap-1 p-1 rounded-2xl"
-              style={{
-                background: 'rgba(0,0,0,0.28)',
-                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)'
-              }}
+              className="grid grid-cols-4 md:grid-cols-8 gap-2 py-1"
             >
               {COUNTDOWN_PRESETS.map((preset) => {
                 const isSelected = targetSeconds === preset.seconds;
@@ -247,21 +243,42 @@ export default function WorkoutControls({
                   <button
                     key={preset.id}
                     onClick={() => onSelectTargetSeconds && onSelectTargetSeconds(preset.seconds)}
-                    className={`relative flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
-                      isSelected ? 'text-white scale-[1.04] z-[1]' : 'text-slate-100 hover:brightness-125'
+                    className={`relative overflow-hidden flex flex-col items-center justify-center py-2 rounded-2xl text-white transition-all duration-200 cursor-pointer active:scale-95 ${
+                      isSelected ? 'scale-[1.05] z-[1]' : 'hover:brightness-125'
                     }`}
                     style={isSelected ? {
-                      background: `linear-gradient(160deg, ${preset.from} 0%, ${preset.to} 100%)`,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 0 1px ${preset.from}, 0 8px 20px -8px ${preset.from}`
+                      // Selected: solid liquid-glass chip in its colour
+                      background: `linear-gradient(180deg, ${preset.from} 0%, ${preset.to} 100%)`,
+                      boxShadow: [
+                        'inset 0 1.5px 0 rgba(255,255,255,0.7)',
+                        'inset 0 -2px 3px rgba(255,255,255,0.3)',
+                        'inset 0 8px 12px -6px rgba(255,255,255,0.4)',
+                        'inset 0 0 0 1px rgba(255,255,255,0.2)',
+                        `0 10px 22px -8px ${preset.from}`
+                      ].join(', '),
+                      textShadow: '0 1px 2px rgba(0,0,0,0.35)'
                     } : {
-                      background: `linear-gradient(160deg, ${preset.from}55 0%, ${preset.to}40 100%)`,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.10), 0 0 0 1px ${preset.from}59`
+                      // Unselected: translucent tinted glass chip
+                      background: `linear-gradient(180deg, ${preset.from}48 0%, ${preset.to}30 100%)`,
+                      backdropFilter: 'blur(12px) saturate(160%)',
+                      WebkitBackdropFilter: 'blur(12px) saturate(160%)',
+                      boxShadow: [
+                        'inset 0 1px 0 rgba(255,255,255,0.32)',
+                        'inset 0 -1px 0 rgba(255,255,255,0.08)',
+                        `inset 0 0 0 1px ${preset.from}55`,
+                        '0 6px 14px -8px rgba(0,0,0,0.8)'
+                      ].join(', ')
                     }}
                   >
-                    <span className="text-[13px] font-semibold tabular-nums tracking-tight">{preset.label}</span>
+                    {/* Curved specular highlight */}
                     <span
-                      className="text-[9px] font-medium tracking-wide mt-0.5"
-                      style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : `${preset.from}` , filter: isSelected ? undefined : 'brightness(1.25)' }}
+                      className="pointer-events-none absolute top-[2px] left-[8%] right-[8%] h-[46%] rounded-[14px] bg-gradient-to-b to-transparent"
+                      style={{ backgroundImage: `linear-gradient(180deg, rgba(255,255,255,${isSelected ? 0.45 : 0.16}), transparent)` }}
+                    />
+                    <span className="relative text-[13px] font-semibold tabular-nums tracking-tight">{preset.label}</span>
+                    <span
+                      className="relative text-[9px] font-medium tracking-wide mt-0.5"
+                      style={{ color: isSelected ? 'rgba(255,255,255,0.9)' : preset.from, filter: isSelected ? undefined : 'brightness(1.3)' }}
                     >
                       {preset.tag}
                     </span>
