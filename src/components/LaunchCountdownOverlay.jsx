@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Zap, Flag } from 'lucide-react';
 import { playBeep } from '../utils/audio';
 
@@ -10,6 +10,13 @@ export default function LaunchCountdownOverlay({
 }) {
   const [count, setCount] = useState(3);
   const accentColor = themeConfig?.speedAccent || '#38bdf8';
+
+  // The parent re-renders on every telemetry poll (HA mode polls twice a second while idle);
+  // keep the latest callback in a ref so those re-renders don't restart the 3-2-1 timers.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -36,7 +43,7 @@ export default function LaunchCountdownOverlay({
     }, 3000);
 
     const timer4 = setTimeout(() => {
-      onComplete();
+      onCompleteRef.current?.();
     }, 3700);
 
     return () => {
@@ -45,7 +52,7 @@ export default function LaunchCountdownOverlay({
       clearTimeout(timer3);
       clearTimeout(timer4);
     };
-  }, [isOpen, onComplete]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

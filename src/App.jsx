@@ -46,6 +46,12 @@ export default function App() {
   );
   const [profilesModal, setProfilesModal] = useState(null); // null | 'pick' | 'manage'
   const pendingStartRef = useRef(null);
+  // True from "Iniciar"/auto-detect until the workout actually starts (picker + 3-2-1 countdown)
+  const startInProgressRef = useRef(false);
+  // After the rider dismisses the picker, don't re-open it from pedalling for a while
+  const autoStartBlockedUntilRef = useRef(0);
+  const summaryOpenRef = useRef(false);
+  const handleStartWorkoutRef = useRef(null);
 
   const updateProfiles = (profiles) => {
     const next = saveProfiles({ ...profilesData, profiles });
@@ -80,6 +86,7 @@ export default function App() {
 
   // Ask who is riding before every workout start
   const requestStart = (proceed) => {
+    startInProgressRef.current = true;
     pendingStartRef.current = proceed;
     setProfilesModal('pick');
   };
@@ -299,9 +306,16 @@ export default function App() {
                 heartRate: data.heartRate ?? 0
               });
 
-              // Automatically start workout session when user starts pedaling!
-              if (liveCadence > 15 || liveSpeed > 4) {
-                handleStartWorkout();
+              // Rider started pedalling without pressing Iniciar: ask who it is, then start straight away
+              if (
+                (liveCadence > 15 || liveSpeed > 4) &&
+                !startInProgressRef.current &&
+                !summaryOpenRef.current &&
+                Date.now() > autoStartBlockedUntilRef.current
+              ) {
+                startInProgressRef.current = true;
+                pendingStartRef.current = () => handleStartWorkoutRef.current?.();
+                setProfilesModal('pick');
               }
             })
             .catch(() => {});
@@ -422,6 +436,7 @@ export default function App() {
 
   // Workout Controls Handlers
   const handleStartWorkout = () => {
+    startInProgressRef.current = false;
     const now = Date.now();
     workoutStartTimeRef.current = now;
     accumulatedPausedTimeRef.current = 0;
@@ -463,6 +478,14 @@ export default function App() {
       wakeLockService.enableBackgroundAudio();
     }
   };
+
+  useEffect(() => {
+    handleStartWorkoutRef.current = handleStartWorkout;
+  });
+
+  useEffect(() => {
+    summaryOpenRef.current = isSummaryModalOpen;
+  }, [isSummaryModalOpen]);
 
   const handleStopWorkout = () => {
     const now = Date.now();
@@ -792,7 +815,12 @@ export default function App() {
         workoutCounts={workoutCounts}
         onPick={(id) => (profilesModal === 'pick' ? handleProfilePicked(id) : (selectProfile(id), setProfilesModal(null)))}
         onChangeProfiles={updateProfiles}
-        onClose={() => { pendingStartRef.current = null; setProfilesModal(null); }}
+        onClose={() => {
+          if (pendingStartRef.current) autoStartBlockedUntilRef.current = Date.now() + 30000;
+          pendingStartRef.current = null;
+          startInProgressRef.current = false;
+          setProfilesModal(null);
+        }}
       />
 
       {/* Modal: Workout Completion Celebration */}

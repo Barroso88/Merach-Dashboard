@@ -110,12 +110,9 @@ export default function Navbar({
             </span>
           </span>
           <span className="flex flex-col items-start leading-none whitespace-nowrap">
-            <span className="text-[14px] tracking-[0.3em] text-white">
-              <span className="font-bold">MERACH</span>
-              <span className="font-light ml-1.5" style={{ color: accent }}>BIKE</span>
-            </span>
-            <span className="hidden sm:block tab:hidden mt-1.5 text-[9px] font-medium uppercase tracking-[0.34em] text-slate-500">
-              Smart Cycling Telemetry
+            <span className="text-[14px] tracking-[0.3em] text-white uppercase">
+              <span className="font-bold">Cycling</span>
+              <span className="font-light ml-1.5" style={{ color: accent }}>Training</span>
             </span>
           </span>
         </button>
