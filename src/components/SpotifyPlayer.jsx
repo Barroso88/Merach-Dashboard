@@ -311,17 +311,17 @@ export function SpotifyPanel({ spotify, isOpen, onClose }) {
 
           {/* Transport */}
           <div className="relative mt-3 flex items-center justify-center gap-4">
-            <RoundButton onClick={() => actions.setShuffle(!spotify.shuffle)} active={spotify.shuffle} title="Aleatório" size={38}><Shuffle className="w-4 h-4" /></RoundButton>
+            <RoundButton onClick={() => actions.setShuffle(!spotify.shuffle)} active={spotify.shuffle} disabled={!spotify.supportsShuffle} title="Aleatório" size={38}><Shuffle className="w-4 h-4" /></RoundButton>
             <RoundButton onClick={actions.previous} title="Anterior" size={46}><SkipBack className="w-5 h-5 fill-current" /></RoundButton>
             <RoundButton onClick={actions.toggle} primary title={spotify.isPlaying ? 'Pausar' : 'Tocar'} size={64}>
               {spotify.isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
             </RoundButton>
             <RoundButton onClick={actions.next} title="Seguinte" size={46}><SkipForward className="w-5 h-5 fill-current" /></RoundButton>
-            <RoundButton onClick={actions.cycleRepeat} active={spotify.repeat !== 'off'} title="Repetir" size={38}><RepeatIcon className="w-4 h-4" /></RoundButton>
+            <RoundButton onClick={actions.cycleRepeat} active={spotify.repeat !== 'off'} disabled={!spotify.supportsRepeat} title="Repetir" size={38}><RepeatIcon className="w-4 h-4" /></RoundButton>
           </div>
 
           {/* Volume */}
-          {spotify.volume !== null && (
+          {spotify.supportsVolume && spotify.volume !== null ? (
             <div className="relative mt-5 flex items-center gap-3">
               <VolumeIcon className="w-4 h-4 text-slate-400 shrink-0" />
               <input
@@ -338,11 +338,20 @@ export function SpotifyPanel({ spotify, isOpen, onClose }) {
               />
               <span className="w-9 text-right text-[11px] tabular-nums text-slate-400">{Math.round(spotify.volume * 100)}%</span>
             </div>
+          ) : spotify.canControl && (
+            <p className="relative mt-4 flex items-center gap-2 text-[11px] text-slate-500">
+              <Volume2 className="w-3.5 h-3.5" /> Este aparelho não permite controlar o volume à distância — usa o volume do próprio aparelho.
+            </p>
           )}
 
           {/* Device */}
           <div className="relative mt-5">
             <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Tocar em</span>
+            {spotify.isWebPlayerSource && (
+              <p className="mt-1 text-[11px] leading-relaxed text-amber-300/90">
+                A música está a ir para o Web Player do browser, que pode ficar sem som se esse separador não estiver aberto e ativo. Escolhe a app Spotify do aparelho.
+              </p>
+            )}
             {!spotify.canControl && spotify.sources.length > 0 && (
               <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
                 Nada a tocar: carrega em ▶ (ou numa lista) e a música começa no aparelho escolhido.
@@ -360,7 +369,7 @@ export function SpotifyPanel({ spotify, isOpen, onClose }) {
                     }`}
                     style={spotify.source === src ? { background: SPOTIFY_GREEN } : undefined}
                   >
-                    <Smartphone className="w-3.5 h-3.5" /> {src}
+                    <Smartphone className="w-3.5 h-3.5" /> {src}{spotify.source === src && spotify.status === 'playing' ? ' · a tocar' : ''}
                   </button>
                 ))}
               </div>
