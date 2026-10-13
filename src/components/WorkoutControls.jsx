@@ -13,15 +13,16 @@ import LaunchCountdownOverlay from './LaunchCountdownOverlay';
 import GoalTrack from './GoalTrack';
 import { premiumSurfaceStyle, accentHairlineStyle } from '../constants/surfaces';
 
+// Each duration has its own colour (cool → hot as the ride gets longer)
 const COUNTDOWN_PRESETS = [
-  { id: 'free', label: 'Livre', seconds: 0, tag: 'Sem limite' },
-  { id: '5m', label: '5 min', seconds: 300, tag: 'Sprint' },
-  { id: '10m', label: '10 min', seconds: 600, tag: 'Express' },
-  { id: '15m', label: '15 min', seconds: 900, tag: 'Cardio' },
-  { id: '20m', label: '20 min', seconds: 1200, tag: 'Queima' },
-  { id: '30m', label: '30 min', seconds: 1800, tag: 'Endurance' },
-  { id: '45m', label: '45 min', seconds: 2700, tag: 'Pro Ride' },
-  { id: '60m', label: '60 min', seconds: 3600, tag: 'Desafio' }
+  { id: 'free', label: 'Livre', seconds: 0, tag: 'Sem limite', from: '#94a3b8', to: '#475569' },
+  { id: '5m', label: '5 min', seconds: 300, tag: 'Sprint', from: '#38bdf8', to: '#0369a1' },
+  { id: '10m', label: '10 min', seconds: 600, tag: 'Express', from: '#34d399', to: '#047857' },
+  { id: '15m', label: '15 min', seconds: 900, tag: 'Cardio', from: '#a3e635', to: '#4d7c0f' },
+  { id: '20m', label: '20 min', seconds: 1200, tag: 'Queima', from: '#facc15', to: '#a16207' },
+  { id: '30m', label: '30 min', seconds: 1800, tag: 'Endurance', from: '#fb923c', to: '#c2410c' },
+  { id: '45m', label: '45 min', seconds: 2700, tag: 'Pro Ride', from: '#f43f5e', to: '#9f1239' },
+  { id: '60m', label: '60 min', seconds: 3600, tag: 'Desafio', from: '#a78bfa', to: '#6d28d9' }
 ];
 
 export default function WorkoutControls({
@@ -210,17 +211,20 @@ export default function WorkoutControls({
                     key={preset.id}
                     onClick={() => onSelectTargetSeconds && onSelectTargetSeconds(preset.seconds)}
                     className={`relative flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-200 cursor-pointer ${
-                      isSelected ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
+                      isSelected ? 'text-white scale-[1.04] z-[1]' : 'text-slate-100 hover:brightness-125'
                     }`}
                     style={isSelected ? {
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.05) 100%)',
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px ${accentColor}55, 0 6px 16px -8px ${accentColor}`
-                    } : {}}
+                      background: `linear-gradient(160deg, ${preset.from} 0%, ${preset.to} 100%)`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 0 1px ${preset.from}, 0 8px 20px -8px ${preset.from}`
+                    } : {
+                      background: `linear-gradient(160deg, ${preset.from}55 0%, ${preset.to}40 100%)`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.10), 0 0 0 1px ${preset.from}59`
+                    }}
                   >
                     <span className="text-[13px] font-semibold tabular-nums tracking-tight">{preset.label}</span>
                     <span
                       className="text-[9px] font-medium tracking-wide mt-0.5"
-                      style={{ color: isSelected ? accentColor : (isRose ? 'rgba(244,114,182,0.55)' : '#64748b') }}
+                      style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : `${preset.from}` , filter: isSelected ? undefined : 'brightness(1.25)' }}
                     >
                       {preset.tag}
                     </span>
