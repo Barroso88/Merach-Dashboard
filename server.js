@@ -716,7 +716,15 @@ const server = http.createServer(async (req, res) => {
         const data = {
           profiles: body.profiles
             .filter(p => p && typeof p.id === 'string' && typeof p.name === 'string')
-            .map(p => ({ id: p.id, name: p.name.slice(0, 40), color: p.color, theme: p.theme === 'rose' ? 'rose' : 'cyan', createdAt: p.createdAt })),
+            .map(p => ({
+              id: p.id,
+              name: p.name.slice(0, 40),
+              color: p.color,
+              theme: p.theme === 'rose' ? 'rose' : 'cyan',
+              // Small square JPEG/PNG data URL resized on the client; anything else is dropped
+              photo: typeof p.photo === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(p.photo) && p.photo.length < 400000 ? p.photo : null,
+              createdAt: p.createdAt
+            })),
           legacyProfileId: typeof body.legacyProfileId === 'string' ? body.legacyProfileId : null
         };
         writeJsonFile(PROFILES_FILE, data);
